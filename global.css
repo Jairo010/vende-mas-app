@@ -4,56 +4,56 @@
 
 @layer base {
   :root {
-    /* ─── Light Theme — Elegant Navy & Gold ─── */
+    /* ─── Light Theme — Crisp White, Pure Black & Carmine Red ─── */
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 0 0% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 30%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 38 92% 50%;
-    --secondary-foreground: 38 92% 10%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 84% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 85% 97%;
+    --accent-foreground: 0 84% 45%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 71% 35%;
+    --success: 142 71% 38%;
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 10%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 30%;
+    --warning-foreground: 0 0% 10%;
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 0 84% 50%;
   }
 
   .dark {
-    /* ─── Dark Theme — Deep Charcoal & Gold ─── */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 38 92% 55%;
-    --secondary-foreground: 38 92% 10%;
-    --muted: 217 33% 15%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 15%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 72% 51%;
+    /* ─── Dark Theme — Jet Black, Pure White & Electric Carmine Red ─── */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 85% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 50% 15%;
+    --accent-foreground: 0 85% 65%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 98%;
     --success: 142 71% 42%;
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 55%;
-    --warning-foreground: 38 92% 10%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 217 91% 60%;
+    --warning-foreground: 0 0% 10%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 85% 58%;
   }
 }

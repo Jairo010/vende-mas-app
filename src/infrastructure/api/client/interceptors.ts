@@ -11,7 +11,8 @@ import {
   ValidationError,
 } from '@/core/errors/domain.error';
 import type { ApiResponse } from '@/core/types/api.types';
-import type { AuthTokens } from '@/core/types/auth.types';
+import type { RefreshTokenResponseDto } from '@/infrastructure/api/dto/auth.dto';
+import { useAuthStore } from '@/stores/auth.store';
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -84,18 +85,20 @@ export function setupInterceptors(instance: AxiosInstance): void {
             throw new UnauthorizedError('No hay token de refresco disponible');
           }
 
-          const refreshResponse = await axios.post<ApiResponse<AuthTokens>>(
-            `${API_BASE_URL}${API_ENDPOINTS.auth.refreshToken}`,
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${refreshToken}`,
-              },
-            },
-          );
+          const refreshResponse = await axios.post<
+            ApiResponse<RefreshTokenResponseDto> | RefreshTokenResponseDto
+          >(`${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`, { refreshToken });
 
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-            refreshResponse.data.data;
+          const responseData = refreshResponse.data;
+          const tokenData: RefreshTokenResponseDto =
+            'statusCode' in responseData ? responseData.data : responseData;
+
+          const newAccessToken = tokenData.accessToken;
+          const newRefreshToken = tokenData.refreshToken;
+
+          if (!newAccessToken) {
+            throw new UnauthorizedError('Token de acceso no devuelto por el servidor');
+          }
 
           await secureStorageAdapter.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
           if (newRefreshToken) {
@@ -113,6 +116,7 @@ export function setupInterceptors(instance: AxiosInstance): void {
           processQueue(refreshErr, null);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
+          useAuthStore.getState().clearSession();
           return Promise.reject(
             new UnauthorizedError('Sesión expirada. Por favor inicia sesión nuevamente.'),
           );

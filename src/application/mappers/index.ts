@@ -1,2 +1,1 @@
-// Application mappers barrel export
-export {};
+export * from './auth.mapper';

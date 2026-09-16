@@ -2,15 +2,24 @@ import '../global.css';
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 import { AppProviders } from '@/shared/providers/app-providers';
 import { useAuthStore } from '@/stores/auth.store';
 import { useThemeStore } from '@/stores/theme.store';
 
+// Suppress strict mode shared value render warnings from libraries/interop
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
+
 function AuthGuard() {
   const segments = useSegments();
   const router = useRouter();
-  const { isAuthenticated, isHydrated: authHydrated } = useAuthStore();
-  const { isHydrated: themeHydrated, getEffectiveScheme } = useThemeStore();
+  const authHydrated = useAuthStore((state) => state.isHydrated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const themeHydrated = useThemeStore((state) => state.isHydrated);
+  const scheme = useThemeStore((state) => state.getEffectiveScheme());
 
   useEffect(() => {
     if (!authHydrated || !themeHydrated) return;
@@ -27,8 +36,6 @@ function AuthGuard() {
   if (!authHydrated || !themeHydrated) {
     return null;
   }
-
-  const scheme = getEffectiveScheme();
 
   return (
     <>

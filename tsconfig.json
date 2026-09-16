@@ -25,7 +25,8 @@
       "@/shared/*": ["./src/shared/*"],
       "@/stores/*": ["./src/stores/*"],
       "@/theme/*": ["./src/theme/*"]
-    }
+    },
+    "types": ["jest"]
   },
   "include": [
     "**/*.ts",

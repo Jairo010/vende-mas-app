@@ -1,2 +1,1 @@
-// Domain entities barrel export
-export {};
+export * from './auth-user.entity';

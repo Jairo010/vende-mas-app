@@ -7,8 +7,11 @@ export const API_TIMEOUT_MS = 15_000;
 export const API_ENDPOINTS = {
   auth: {
     login: '/api/v1/auth/login',
-    refreshToken: '/api/v1/auth/refresh-token',
-    profile: '/api/v1/auth/profile',
+    refresh: '/api/v1/auth/refresh',
+    refreshToken: '/api/v1/auth/refresh',
+    logout: '/api/v1/auth/logout',
+    me: '/api/v1/auth/me',
+    profile: '/api/v1/auth/me',
   },
   customers: {
     list: '/api/v1/customers',

@@ -1,2 +1,1 @@
-// Application schemas barrel export
-export {};
+export * from './auth.schema';

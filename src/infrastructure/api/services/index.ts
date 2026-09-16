@@ -1,2 +1,1 @@
-// Concrete repository implementations barrel export
-export {};
+export * from './auth-api.service';

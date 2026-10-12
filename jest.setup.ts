@@ -78,3 +78,66 @@ jest.mock('expo-router', () => ({
   useSegments: () => ['(auth)'],
   Link: 'Link',
 }));
+
+// Mock expo-location
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getCurrentPositionAsync: jest.fn().mockResolvedValue({
+    coords: {
+      latitude: -0.180653,
+      longitude: -78.467834,
+      altitude: 2800,
+      accuracy: 5,
+      altitudeAccuracy: 5,
+      heading: 0,
+      speed: 0,
+    },
+    timestamp: Date.now(),
+  }),
+  LocationAccuracy: {
+    Lowest: 1,
+    Low: 2,
+    Balanced: 3,
+    High: 4,
+    Highest: 5,
+    BestForNavigation: 6,
+  },
+}));
+
+// Mock expo-image-picker
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  launchCameraAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///mock/image.jpg',
+        width: 800,
+        height: 600,
+        type: 'image',
+        fileName: 'image.jpg',
+        fileSize: 1024 * 100,
+      },
+    ],
+  }),
+  launchImageLibraryAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///mock/gallery.jpg',
+        width: 800,
+        height: 600,
+        type: 'image',
+        fileName: 'gallery.jpg',
+        fileSize: 1024 * 100,
+      },
+    ],
+  }),
+  MediaTypeOptions: {
+    All: 'All',
+    Images: 'Images',
+    Videos: 'Videos',
+  },
+}));
+

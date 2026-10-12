@@ -20,6 +20,13 @@ export const API_ENDPOINTS = {
   tasks: {
     list: '/api/v1/tasks',
     detail: (id: string) => `/api/v1/tasks/${id}`,
+    transition: (id: string) => `/api/v1/tasks/${id}/transition`,
+    status: (id: string) => `/api/v1/tasks/${id}/status`,
+    uploadPhoto: '/api/v1/tasks/upload-photo',
+  },
+  products: {
+    list: '/api/v1/products',
+    detail: (id: string) => `/api/v1/products/${id}`,
   },
   sales: {
     orders: '/api/v1/orders',

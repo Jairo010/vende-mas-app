@@ -37,7 +37,20 @@
       "expo-secure-store",
       "expo-font",
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vende Más usa tu ubicación para registrar el inicio y el fin de cada visita a tus clientes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Vende Más usa la cámara para tomar la foto del local de tus clientes.",
+          "photosPermission": "Vende Más accede a tus fotos para adjuntar la foto del local de tus clientes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

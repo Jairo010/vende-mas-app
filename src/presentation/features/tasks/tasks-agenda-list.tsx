@@ -124,11 +124,7 @@ export function TasksAgendaList({
 
               {/* Right column: Task card */}
               <View style={{ flex: 1, paddingBottom: 16 }}>
-                <TaskCard
-                  task={item}
-                  onPress={handleCardPress}
-                  onToggleStatus={onToggleStatus}
-                />
+                <TaskCard task={item} onPress={handleCardPress} onToggleStatus={onToggleStatus} />
               </View>
             </View>
           );

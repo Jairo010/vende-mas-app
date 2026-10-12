@@ -25,8 +25,6 @@ export function TaskCard({ task, onPress, onToggleStatus, className = '' }: Task
   const isOverdue = task.isOverdue();
   const TypeIcon = typeVisual.icon;
 
-
-
   const handleToggle = async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -102,7 +100,6 @@ export function TaskCard({ task, onPress, onToggleStatus, className = '' }: Task
                 </View>
               ) : null}
             </View>
-
           </View>
 
           {/* Title */}

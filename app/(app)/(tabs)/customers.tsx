@@ -10,6 +10,10 @@ import { OfflineBanner } from '@/presentation/components/feedback/offline-banner
 import { Chip } from '@/presentation/components/ui/chip';
 import { EmptyState } from '@/presentation/components/ui/empty-state';
 import { Input } from '@/presentation/components/ui/input';
+import {
+  CustomerLookupCard,
+  looksLikeIdentification,
+} from '@/presentation/features/customers/customer-lookup-card';
 import { CustomerListItem } from '@/presentation/features/customers/customer-list-item';
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value';
 import { es } from '@/shared/i18n/es';
@@ -35,6 +39,8 @@ export default function CustomersScreen() {
   });
   const { syncNow, isSyncing } = useSyncNow();
   const isFiltering = Boolean(debouncedSearch) || status !== 'ALL';
+  const openCustomer = (id: string) =>
+    router.push({ pathname: '/(app)/customer/[id]', params: { id } });
 
   return (
     <View className="flex-1 bg-background">
@@ -72,12 +78,7 @@ export default function CustomersScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         ItemSeparatorComponent={() => <View className="h-px bg-border" />}
         renderItem={({ item }) => (
-          <CustomerListItem
-            customer={item}
-            onPress={(customer) =>
-              router.push({ pathname: '/(app)/customer/[id]', params: { id: customer.id } })
-            }
-          />
+          <CustomerListItem customer={item} onPress={(customer) => openCustomer(customer.id)} />
         )}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -90,7 +91,14 @@ export default function CustomersScreen() {
           />
         }
         ListEmptyComponent={
-          isLoading ? null : (
+          isLoading ? null : looksLikeIdentification(debouncedSearch) ? (
+            <View className="p-4">
+              <CustomerLookupCard
+                identification={debouncedSearch}
+                onFound={(customer) => openCustomer(customer.id)}
+              />
+            </View>
+          ) : (
             <EmptyState
               icon={<Users size={32} color={colors.mutedForeground} />}
               title={isFiltering ? es.customers.noMatchesTitle : es.customers.emptyTitle}

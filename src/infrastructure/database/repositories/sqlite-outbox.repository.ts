@@ -92,6 +92,19 @@ export class SqliteOutboxRepository implements IOutboxPort {
       .run();
   }
 
+  public async requeue(seq: number): Promise<void> {
+    this.ctx.db().transaction((tx) => {
+      const row = tx.select().from(outbox).where(eq(outbox.seq, seq)).get();
+      if (!row || row.status !== 'REJECTED') return;
+      // Keeps its seq (original order) and its key: the API re-evaluates a rejected key.
+      tx.update(outbox)
+        .set({ status: 'PENDING', lastErrorCode: null, lastErrorMessage: null })
+        .where(eq(outbox.seq, seq))
+        .run();
+      refreshEntitySyncStatus(tx, row.entityType as SyncEntityType, row.entityId);
+    });
+  }
+
   public async discard(seq: number): Promise<void> {
     this.ctx.db().transaction((tx) => {
       const row = tx.select().from(outbox).where(eq(outbox.seq, seq)).get();

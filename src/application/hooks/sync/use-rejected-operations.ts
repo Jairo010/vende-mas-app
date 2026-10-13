@@ -18,10 +18,18 @@ export function useRejectedOperations(outbox: IOutboxPort = sqliteOutboxReposito
     invalidates: () => [syncKeys.all, ['visits'], ['customers'], ['orders']],
   });
 
+  const requeue = useOfflineMutation<void, number>({
+    mutationFn: (seq) => outbox.requeue(seq),
+    invalidates: () => [syncKeys.all, ['visits'], ['customers'], ['orders']],
+  });
+
   return {
     operations: query.data ?? [],
     isLoading: query.isLoading,
     discard: discard.mutateAsync,
     isDiscarding: discard.isPending,
+    /** Sends a rejected operation again once its cause was fixed. */
+    requeue: requeue.mutateAsync,
+    isRequeueing: requeue.isPending,
   };
 }

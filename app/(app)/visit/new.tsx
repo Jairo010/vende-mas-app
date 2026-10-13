@@ -89,8 +89,11 @@ export default function NewVisitScreen() {
 
   const changeType = (next: VisitType) => {
     setType(next);
-    // Orders and collections only for ACTIVE customers: drop a selection that no longer fits.
-    setSelection((current) => (isSelectionAllowed(next, current) ? current : null));
+    // Orders and collections only for ACTIVE customers: drop a selection that no longer fits
+    // (a follow-up keeps its customer; the step explains why it cannot continue).
+    if (!isFollowUp) {
+      setSelection((current) => (isSelectionAllowed(next, current) ? current : null));
+    }
   };
 
   const canContinue =
@@ -167,7 +170,12 @@ export default function NewVisitScreen() {
           {step === 0 ? <VisitTypeStep value={type} onChange={changeType} /> : null}
 
           {step === 1 && type ? (
-            <CustomerStep visitType={type} selection={selection} onChange={setSelection} />
+            <CustomerStep
+              visitType={type}
+              selection={selection}
+              onChange={setSelection}
+              locked={isFollowUp}
+            />
           ) : null}
 
           {step === 2 ? (

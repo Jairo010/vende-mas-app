@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import type { OrderEntity } from '@/core/entities/order.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
 import {
@@ -10,9 +10,10 @@ import {
 import type { IOrderRepositoryPort } from '@/core/ports/order.repository.port';
 import type { ActorContext } from '@/core/ports/visit.repository.port';
 import type { CreateOrderInput, OrderFilter } from '@/core/types/order.types';
-import { calculateOrderLine, calculateOrderTotals } from '@/core/value-objects/money';
+import { priceOrder } from '@/core/value-objects/order-pricing';
 import type { CreateOrderRequestDto } from '@/infrastructure/api/dto/order.dto';
 import { toZonedIsoString } from '@/shared/utils/date';
+import { CatalogRowMapper } from '../mappers/catalog-row.mapper';
 import { CustomerRowMapper } from '../mappers/customer-row.mapper';
 import { OrderRowMapper, type OrderItemRow, type OrderRow } from '../mappers/order-row.mapper';
 import {
@@ -21,7 +22,7 @@ import {
   enqueueOperation,
   type DbExecutor,
 } from '../outbox-writer';
-import { customers, orderItems, orders, products } from '../schema';
+import { customers, orderItems, orders, products, promotions } from '../schema';
 import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
 
 const DEFAULT_ORDER_LIMIT = 100;
@@ -68,26 +69,38 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
       const customer = CustomerRowMapper.toDomain(customerRow);
       if (!customer.canTakeOrders()) throw new OrderCustomerNotActiveError();
 
-      const lines = input.items.map((item) => {
+      const items = input.items.map((item) => {
         const product = tx.select().from(products).where(eq(products.id, item.productId)).get();
         if (!product || !product.isActive) throw new OrderProductUnavailableError(item.productId);
-        const amounts = calculateOrderLine(item.quantity, product.basePrice, product.taxRate);
+        return { product, quantity: item.quantity };
+      });
+      // Same promotion engine as the API: the local estimate matches the official order.
+      const activePromotions = tx
+        .select()
+        .from(promotions)
+        .where(and(lte(promotions.startsAt, nowIso), gte(promotions.endsAt, nowIso)))
+        .all()
+        .map(CatalogRowMapper.toPromotion);
+      const priced = priceOrder(items, activePromotions, now);
+      const totals = priced.totals;
+
+      const lines = priced.lines.map((line, index) => {
+        const { product } = items[index];
         return {
           id: this.ctx.newId(),
           orderId: id,
           productId: product.id,
           productCode: product.code,
           productName: product.name,
-          quantity: item.quantity,
-          unitPrice: product.basePrice,
-          discount: 0,
-          totalPrice: amounts.totalPrice,
-          taxRate: product.taxRate,
-          taxAmount: amounts.taxAmount,
-          promotionName: null,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          discount: line.discount,
+          totalPrice: line.totalPrice,
+          taxRate: line.taxRate,
+          taxAmount: line.taxAmount,
+          promotionName: line.promotion?.name ?? null,
         } satisfies OrderItemRow;
       });
-      const totals = calculateOrderTotals(lines);
 
       tx.insert(orders)
         .values({

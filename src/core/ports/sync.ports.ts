@@ -25,6 +25,8 @@ export interface IOutboxPort {
   markRetry(seq: number, error: SyncError | null): Promise<void>;
   /** The seller dismisses a rejected operation. */
   discard(seq: number): Promise<void>;
+  /** The seller fixed the cause (e.g. completed billing data): send it again, same key. */
+  requeue(seq: number): Promise<void>;
 }
 
 /** Photos taken offline that must be uploaded before the operations that use them. */

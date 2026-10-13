@@ -10,6 +10,11 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { Input } from '@/presentation/components/ui/input';
+import { notify } from '@/presentation/components/feedback/toast';
+import {
+  CustomerLookupCard,
+  looksLikeIdentification,
+} from '@/presentation/features/customers/customer-lookup-card';
 import { CustomerListItem } from '@/presentation/features/customers/customer-list-item';
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value';
 import { es } from '@/shared/i18n/es';
@@ -25,6 +30,8 @@ export interface CustomerStepProps {
   visitType: VisitType;
   selection: CustomerSelection | null;
   onChange: (selection: CustomerSelection | null) => void;
+  /** Follow-up visits keep the customer of the visit they come from. */
+  locked?: boolean;
 }
 
 /** Whether a selection is valid for the visit type (orders and collections need ACTIVE). */
@@ -39,7 +46,7 @@ function SelectedCustomer({
   onChange,
 }: {
   selection: CustomerSelection;
-  onChange: () => void;
+  onChange?: () => void;
 }) {
   const name =
     selection.kind === 'existing'
@@ -83,15 +90,22 @@ function SelectedCustomer({
           }
         />
       </View>
-      <Button testID="new-visit-change-customer" variant="ghost" size="sm" onPress={onChange}>
-        {es.common.change}
-      </Button>
+      {onChange ? (
+        <Button testID="new-visit-change-customer" variant="ghost" size="sm" onPress={onChange}>
+          {es.common.change}
+        </Button>
+      ) : null}
     </Card>
   );
 }
 
 /** Step 2: search a customer or prospect, or create a prospect on the spot. */
-export function CustomerStep({ visitType, selection, onChange }: CustomerStepProps) {
+export function CustomerStep({
+  visitType,
+  selection,
+  onChange,
+  locked = false,
+}: CustomerStepProps) {
   const colors = useThemeColors();
   const [search, setSearch] = useState('');
   const [creatingProspect, setCreatingProspect] = useState(false);
@@ -106,17 +120,26 @@ export function CustomerStep({ visitType, selection, onChange }: CustomerStepPro
 
   if (selection) {
     return (
-      <SelectedCustomer
-        selection={selection}
-        onChange={() => {
-          if (selection.kind === 'prospect') {
-            // Editing the prospect keeps what was typed.
-            setProspectDraft(selection.prospect);
-            setCreatingProspect(true);
+      <View className="gap-3">
+        {locked && !isSelectionAllowed(visitType, selection) ? (
+          <AlertBanner variant="warning" message={es.newVisit.onlyActiveHint} />
+        ) : null}
+        <SelectedCustomer
+          selection={selection}
+          onChange={
+            locked
+              ? undefined
+              : () => {
+                  if (selection.kind === 'prospect') {
+                    // Editing the prospect keeps what was typed.
+                    setProspectDraft(selection.prospect);
+                    setCreatingProspect(true);
+                  }
+                  onChange(null);
+                }
           }
-          onChange(null);
-        }}
-      />
+        />
+      </View>
     );
   }
 
@@ -157,6 +180,17 @@ export function CustomerStep({ visitType, selection, onChange }: CustomerStepPro
         >
           {es.newVisit.newProspect}
         </Button>
+      ) : null}
+
+      {customers.length === 0 && !isLoading && looksLikeIdentification(debouncedSearch) ? (
+        <CustomerLookupCard
+          identification={debouncedSearch}
+          onFound={(customer) => {
+            const selection: CustomerSelection = { kind: 'existing', customer };
+            if (isSelectionAllowed(visitType, selection)) onChange(selection);
+            else notify.warning(es.newVisit.onlyActiveHint);
+          }}
+        />
       ) : null}
 
       <Card className="overflow-hidden p-0">

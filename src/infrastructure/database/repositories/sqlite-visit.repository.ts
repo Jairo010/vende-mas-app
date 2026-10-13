@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
 import {
@@ -75,6 +75,19 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     return this.load(this.ctx.db(), id);
   }
 
+  public async findByCustomer(customerId: string, limit = 50): Promise<VisitEntity[]> {
+    return this.ctx
+      .db()
+      .select()
+      .from(visits)
+      .leftJoin(customers, eq(customers.id, visits.customerId))
+      .where(eq(visits.customerId, customerId))
+      .orderBy(desc(visits.scheduledAt))
+      .limit(limit)
+      .all()
+      .map((row) => VisitRowMapper.toDomain(row.visits, row.customers));
+  }
+
   public async findInProgress(sellerId: string): Promise<VisitEntity | null> {
     const row = this.ctx
       .db()
@@ -104,8 +117,12 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           'Solo los clientes activos reciben visitas de pedido o cobro',
         );
       }
-      if (input.parentVisitId && !this.load(tx, input.parentVisitId)) {
-        throw new VisitParentNotFoundError();
+      if (input.parentVisitId) {
+        // A follow-up belongs to the same customer as its origin (API rule).
+        const parent = this.load(tx, input.parentVisitId);
+        if (!parent || parent.customerId !== input.customerId) {
+          throw new VisitParentNotFoundError();
+        }
       }
 
       tx.insert(visits)

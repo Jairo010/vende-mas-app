@@ -230,3 +230,13 @@ visit/new ──► type → customer (search | quick prospect) → date/time/se
 The SQLite visit repository mirrors the API rules (one visit in progress per seller, ORDER /
 COLLECTION only for ACTIVE customers, SALE_CLOSED needs an ACTIVE customer, store photo on the
 first opportunity visit, first check-in pins the store location).
+
+## 9. Customers and offline orders (ADR 0005)
+
+```text
+order/new ──► (ACTIVE customer) ──► catalog + cart draft (MMKV) ──► review ──► useCreateOrder
+                 priceOrder() = same promotion/VAT rules as the API (catalog, footer, repository)
+order/[id] ──► official number / pending badge, price adjustments, WhatsApp receipt
+customers ──► search · detail (photo, shortcuts, history) · billing form · lookup by RUC (online)
+sync ──► state, rejected (retry = requeue, discard), pending queue in push order
+```

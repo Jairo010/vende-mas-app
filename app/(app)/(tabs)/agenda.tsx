@@ -130,7 +130,7 @@ export default function AgendaScreen() {
                 <Text className="text-xs font-semibold text-foreground">{es.agenda.goToToday}</Text>
               </Pressable>
             ) : null}
-            <SyncStatusPill onPress={() => router.push('/(app)/(tabs)/more')} />
+            <SyncStatusPill onPress={() => router.push('/(app)/sync')} />
           </View>
         }
       />

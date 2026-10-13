@@ -11,6 +11,10 @@ import type { ActorContext } from './visit.repository.port';
 export interface ICustomerRepositoryPort {
   search(filter?: CustomerFilter): Promise<CustomerEntity[]>;
   findById(id: string): Promise<CustomerEntity | null>;
+  /** Exact match on RUC / cédula / passport (normalized). */
+  findByIdentification(identification: string): Promise<CustomerEntity | null>;
+  /** Stores a customer the API returned (e.g. a lookup): server row, nothing to sync. */
+  saveFromServer(customer: CustomerEntity): Promise<CustomerEntity>;
   create(input: CreateCustomerInput, actor: ActorContext): Promise<CustomerEntity>;
   update(id: string, input: UpdateCustomerInput): Promise<CustomerEntity>;
   /** PROSPECT → ACTIVE with billing data. */

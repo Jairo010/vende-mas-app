@@ -5,6 +5,8 @@ import type { Category, ProductFilter, Promotion } from '../types/catalog.types'
 export interface ICatalogRepositoryPort {
   findProducts(filter?: ProductFilter): Promise<ProductEntity[]>;
   findProductById(id: string): Promise<ProductEntity | null>;
+  /** Products of a cart (inactive ones included, so the cart can flag them). */
+  findProductsByIds(ids: readonly string[]): Promise<ProductEntity[]>;
   findCategories(): Promise<Category[]>;
   /** Promotions valid at `at` (defaults to now). */
   findActivePromotions(at?: Date): Promise<Promotion[]>;

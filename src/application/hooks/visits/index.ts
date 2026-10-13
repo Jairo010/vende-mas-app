@@ -9,3 +9,4 @@ export * from './use-reschedule-visit';
 export * from './use-cancel-visit';
 export * from './use-check-in-visit';
 export * from './use-check-out-visit';
+export * from './use-customer-visits';

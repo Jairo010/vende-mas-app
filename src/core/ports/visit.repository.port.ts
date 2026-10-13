@@ -21,6 +21,8 @@ export interface ActorContext {
 export interface IVisitRepositoryPort {
   findByRange(filter: VisitFilter): Promise<VisitEntity[]>;
   findById(id: string): Promise<VisitEntity | null>;
+  /** History of a customer, most recent first. */
+  findByCustomer(customerId: string, limit?: number): Promise<VisitEntity[]>;
   /** The visit the seller is currently in (check-in done, no check-out yet). */
   findInProgress(sellerId: string): Promise<VisitEntity | null>;
   schedule(input: ScheduleVisitInput, actor: ActorContext): Promise<VisitEntity>;

@@ -72,6 +72,7 @@ class FakeOutbox implements IOutboxPort {
     this.retried.push(seq);
   }
   async discard() {}
+  async requeue() {}
 }
 
 class FakePhotos implements IPendingPhotoPort {

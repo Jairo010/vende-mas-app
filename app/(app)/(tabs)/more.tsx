@@ -1,5 +1,6 @@
 import { Alert, ScrollView, Text, View } from 'react-native';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { LogOut } from 'lucide-react-native';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useLogout } from '@/application/hooks/auth/use-logout';
@@ -16,6 +17,7 @@ import { useThemeColors } from '@/theme';
 
 /** Profile, appearance (theme), sync status and session. */
 export default function MoreScreen() {
+  const router = useRouter();
   const colors = useThemeColors();
   const { user } = useAuthSession();
   const { pendingCount } = useSyncStatus();
@@ -56,7 +58,7 @@ export default function MoreScreen() {
           <ThemeSelector />
         </Card>
 
-        <SyncPanel />
+        <SyncPanel onOpenQueue={() => router.push('/(app)/sync')} />
 
         <Button
           testID="logout-button"

@@ -26,4 +26,7 @@ export const API_ENDPOINTS = {
   users: {
     list: '/api/v1/users',
   },
+  customers: {
+    lookup: '/api/v1/customers/lookup',
+  },
 } as const;

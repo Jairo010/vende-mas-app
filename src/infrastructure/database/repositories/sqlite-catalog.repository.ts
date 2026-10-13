@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, like, lte, or, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, like, lte, or, type SQL } from 'drizzle-orm';
 import type { ProductEntity } from '@/core/entities/product.entity';
 import type { ICatalogRepositoryPort } from '@/core/ports/catalog.repository.port';
 import type { Category, ProductFilter, Promotion } from '@/core/types/catalog.types';
@@ -40,6 +40,17 @@ export class SqliteCatalogRepository implements ICatalogRepositoryPort {
   public async findProductById(id: string): Promise<ProductEntity | null> {
     const row = this.ctx.db().select().from(products).where(eq(products.id, id)).get();
     return row ? CatalogRowMapper.toProduct(row) : null;
+  }
+
+  public async findProductsByIds(ids: readonly string[]): Promise<ProductEntity[]> {
+    if (ids.length === 0) return [];
+    return this.ctx
+      .db()
+      .select()
+      .from(products)
+      .where(inArray(products.id, [...ids]))
+      .all()
+      .map(CatalogRowMapper.toProduct);
   }
 
   public async findCategories(): Promise<Category[]> {

@@ -1,6 +1,10 @@
-import { and, asc, eq, like, or, type SQL } from 'drizzle-orm';
+import { and, asc, eq, like, ne, or, type SQL } from 'drizzle-orm';
 import type { CustomerEntity } from '@/core/entities/customer.entity';
-import { CustomerAlreadyActiveError, CustomerNotFoundError } from '@/core/errors/customer.errors';
+import {
+  CustomerAlreadyActiveError,
+  CustomerIdentificationTakenError,
+  CustomerNotFoundError,
+} from '@/core/errors/customer.errors';
 import type { ICustomerRepositoryPort } from '@/core/ports/customer.repository.port';
 import type { ActorContext } from '@/core/ports/visit.repository.port';
 import type {
@@ -21,6 +25,7 @@ import {
   buildIdempotencyKey,
   compactPayload,
   enqueueOperation,
+  findEntityIdsWithPendingChanges,
   registerPendingPhoto,
   type DbExecutor,
 } from '../outbox-writer';
@@ -32,6 +37,16 @@ const DEFAULT_SEARCH_LIMIT = 50;
 function clean(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+/** Same normalization as the API: no spaces or dashes, upper case (passports). */
+export function normalizeIdentification(value: string): string {
+  return value.replace(/[\s-]/g, '').toUpperCase();
+}
+
+function withoutId<T extends { id: string }>(row: T): Omit<T, 'id'> {
+  const { id: _id, ...rest } = row;
+  return rest;
 }
 
 export class SqliteCustomerRepository implements ICustomerRepositoryPort {
@@ -68,14 +83,45 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
     return row ? CustomerRowMapper.toDomain(row) : null;
   }
 
+  public async findByIdentification(identification: string): Promise<CustomerEntity | null> {
+    const normalized = normalizeIdentification(identification);
+    if (!normalized) return null;
+    const row = this.ctx
+      .db()
+      .select()
+      .from(customers)
+      .where(eq(customers.identification, normalized))
+      .get();
+    return row ? CustomerRowMapper.toDomain(row) : null;
+  }
+
+  public async saveFromServer(customer: CustomerEntity): Promise<CustomerEntity> {
+    return this.ctx.db().transaction((tx) => {
+      // Local changes still waiting to be sent win (same rule as the pull).
+      if (!findEntityIdsWithPendingChanges(tx).has(customer.id)) {
+        const row = CustomerRowMapper.toServerColumns(customer);
+        tx.insert(customers)
+          .values({ ...row, syncStatus: 'SYNCED' })
+          .onConflictDoUpdate({ target: customers.id, set: withoutId(row) })
+          .run();
+      }
+      return this.loadOrThrow(tx, customer.id);
+    });
+  }
+
   public async create(input: CreateCustomerInput, actor: ActorContext): Promise<CustomerEntity> {
     const id = this.ctx.newId();
     const photoId = input.storePhotoLocalUri ? this.ctx.newId() : null;
     const now = this.ctx.now();
     const nowIso = now.toISOString();
     const status = input.status ?? 'PROSPECT';
+    const identification = input.identification
+      ? normalizeIdentification(input.identification) || undefined
+      : undefined;
 
     return this.ctx.db().transaction((tx) => {
+      if (identification) this.assertIdentificationFree(tx, identification, id);
+
       tx.insert(customers)
         .values({
           id,
@@ -83,7 +129,7 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
           tradeName: input.tradeName.trim(),
           businessName: clean(input.businessName) ?? null,
           identificationType: input.identificationType ?? null,
-          identification: clean(input.identification) ?? null,
+          identification: identification ?? null,
           contactName: clean(input.contactName) ?? null,
           phone: clean(input.phone) ?? null,
           email: clean(input.email) ?? null,
@@ -113,7 +159,7 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
         tradeName: input.tradeName.trim(),
         businessName: clean(input.businessName),
         identificationType: input.identificationType,
-        identification: clean(input.identification),
+        identification,
         contactName: clean(input.contactName),
         phone: clean(input.phone),
         email: clean(input.email),
@@ -165,11 +211,13 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
     return this.ctx.db().transaction((tx) => {
       const customer = this.loadOrThrow(tx, id);
       if (!customer.isProspect()) throw new CustomerAlreadyActiveError();
+      const identification = normalizeIdentification(input.identification);
+      this.assertIdentificationFree(tx, identification, id);
 
       const payload: PromoteCustomerRequestDto = {
         businessName: input.businessName.trim(),
         identificationType: input.identificationType,
-        identification: input.identification.trim(),
+        identification,
         address: input.address.trim(),
         email: input.email.trim(),
         phone: clean(input.phone),
@@ -220,6 +268,16 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
       },
       now.toISOString(),
     );
+  }
+
+  /** Identifications are unique (the API rejects duplicates): catch it before queuing. */
+  private assertIdentificationFree(db: DbExecutor, identification: string, ownId: string): void {
+    const other = db
+      .select({ tradeName: customers.tradeName })
+      .from(customers)
+      .where(and(eq(customers.identification, identification), ne(customers.id, ownId)))
+      .get();
+    if (other) throw new CustomerIdentificationTakenError(other.tradeName);
   }
 
   private loadOrThrow(db: DbExecutor, id: string): CustomerEntity {

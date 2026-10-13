@@ -9,3 +9,4 @@ export * from './sync.ports';
 export * from './location.port';
 export * from './camera.port';
 export * from './team.repository.port';
+export * from './customer-lookup.port';

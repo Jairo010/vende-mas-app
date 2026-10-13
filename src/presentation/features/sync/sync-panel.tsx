@@ -1,26 +1,48 @@
 import { Text, View } from 'react-native';
-import { RefreshCw } from 'lucide-react-native';
+import { ListOrdered, RefreshCw } from 'lucide-react-native';
 import { useRejectedOperations } from '@/application/hooks/sync/use-rejected-operations';
 import { useSyncNow } from '@/application/hooks/sync/use-sync-now';
 import { useSyncStatus } from '@/application/hooks/sync/use-sync-status';
 import { SyncStatusPill } from '@/presentation/components/feedback/sync-status-pill';
+import { notify } from '@/presentation/components/feedback/toast';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { es } from '@/shared/i18n/es';
 import { formatDateTime } from '@/shared/utils/date';
 import { useThemeColors } from '@/theme';
+import { SyncOperationRow } from './sync-operation-row';
 
-/** Sync summary for "Más": state, pending changes, rejected ones and a manual trigger. */
-export function SyncPanel() {
+export interface SyncPanelProps {
+  /** Shows the "Ver cola de envío" button (the full queue lives in its own screen). */
+  onOpenQueue?: () => void;
+}
+
+/** Sync summary: state, pending changes, rejected ones (retry / discard) and a manual run. */
+export function SyncPanel({ onOpenQueue }: SyncPanelProps) {
   const colors = useThemeColors();
   const { pendingCount, lastSyncedAt, lastError } = useSyncStatus();
   const { syncNow, isSyncing } = useSyncNow();
-  const { operations: rejected, discard, isDiscarding } = useRejectedOperations();
+  const {
+    operations: rejected,
+    discard,
+    isDiscarding,
+    requeue,
+    isRequeueing,
+  } = useRejectedOperations();
 
   const errorMessage =
     lastError && lastError in es.sync.errors
       ? es.sync.errors[lastError as keyof typeof es.sync.errors]
       : null;
+
+  const retry = async (seq: number) => {
+    try {
+      await requeue(seq);
+      notify.success(es.sync.requeued);
+    } catch (error) {
+      notify.error(error);
+    }
+  };
 
   return (
     <Card className="p-4">
@@ -44,34 +66,21 @@ export function SyncPanel() {
       </View>
 
       {rejected.length > 0 ? (
-        <View className="mt-4">
-          <Text className="text-sm font-semibold text-destructive">{es.sync.rejectedTitle}</Text>
-          <Text className="mt-0.5 text-xs text-muted-foreground">
-            {es.sync.rejectedDescription}
-          </Text>
+        <View className="mt-4 gap-2">
+          <View>
+            <Text className="text-sm font-semibold text-destructive">{es.sync.rejectedTitle}</Text>
+            <Text className="mt-0.5 text-xs text-muted-foreground">
+              {es.sync.rejectedDescription}
+            </Text>
+          </View>
           {rejected.map((operation) => (
-            <View
+            <SyncOperationRow
               key={operation.seq}
-              testID={`rejected-operation-${operation.seq}`}
-              className="mt-2 flex-row items-center rounded-xl border border-destructive/30 bg-destructive/10 p-3"
-            >
-              <View className="flex-1 pr-2">
-                <Text className="text-sm font-medium text-foreground">
-                  {es.sync.entities[operation.entityType]} · {operation.action}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {operation.lastError?.message ?? operation.lastError?.code}
-                </Text>
-              </View>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isDiscarding}
-                onPress={() => void discard(operation.seq)}
-              >
-                {es.sync.discard}
-              </Button>
-            </View>
+              operation={operation}
+              disabled={isDiscarding || isRequeueing}
+              onRetry={(seq) => void retry(seq)}
+              onDiscard={(seq) => void discard(seq)}
+            />
           ))}
         </View>
       ) : null}
@@ -86,6 +95,18 @@ export function SyncPanel() {
       >
         {isSyncing ? es.sync.syncing : es.sync.syncNow}
       </Button>
+
+      {onOpenQueue ? (
+        <Button
+          testID="sync-open-queue"
+          className="mt-2"
+          variant="ghost"
+          leftIcon={<ListOrdered size={16} color={colors.foreground} />}
+          onPress={onOpenQueue}
+        >
+          {es.sync.viewDetails}
+        </Button>
+      ) : null}
     </Card>
   );
 }

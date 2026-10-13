@@ -62,7 +62,7 @@ export class VisitCustomerNotInvoiceableError extends DomainError {
 export class VisitParentNotFoundError extends DomainError {
   public readonly code = 'VISIT_PARENT_NOT_FOUND';
 
-  constructor(message = 'La visita de origen no existe en este dispositivo', details?: unknown) {
+  constructor(message = 'La visita de origen no existe o es de otro cliente', details?: unknown) {
     super(message, 404, details);
   }
 }

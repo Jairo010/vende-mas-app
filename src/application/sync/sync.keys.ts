@@ -4,6 +4,7 @@ export const syncKeys = {
   all: ['sync'] as const,
   outbox: () => [...syncKeys.all, 'outbox'] as const,
   rejected: () => [...syncKeys.all, 'rejected'] as const,
+  pending: () => [...syncKeys.all, 'pending'] as const,
 };
 
 /**

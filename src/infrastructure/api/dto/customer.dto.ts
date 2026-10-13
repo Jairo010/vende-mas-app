@@ -72,3 +72,8 @@ export interface PromoteCustomerRequestDto {
   phone?: string;
   contactName?: string;
 }
+
+/** `GET /customers/lookup?identification=` */
+export interface CustomerLookupResponseDto extends CustomerResponseDto {
+  lookupSource: string;
+}

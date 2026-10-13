@@ -9,6 +9,7 @@ import { es } from '@/shared/i18n/es';
 import { addDays, todayKey, type DateKey } from '@/shared/utils/date';
 import { OrderLineRow } from './order-line-row';
 import { OrderTotals } from './order-totals';
+import { PaymentPlanPicker, type PaymentPlanValue } from './payment-plan-picker';
 
 const MAX_NOTES_LENGTH = 1000;
 
@@ -23,6 +24,8 @@ export interface OrderReviewProps {
   onChangeDeliveryDate: (date: DateKey) => void;
   notes: string;
   onChangeNotes: (notes: string) => void;
+  paymentPlan: PaymentPlanValue;
+  onChangePaymentPlan: (plan: PaymentPlanValue) => void;
 }
 
 /** Cart review: editable lines, delivery date, notes and estimated totals. */
@@ -35,6 +38,8 @@ export function OrderReview({
   onChangeDeliveryDate,
   notes,
   onChangeNotes,
+  paymentPlan,
+  onChangePaymentPlan,
 }: OrderReviewProps) {
   return (
     <View className="gap-4">
@@ -103,6 +108,14 @@ export function OrderReview({
 
       <Card className="p-4">
         <OrderTotals totals={priced.totals} />
+      </Card>
+
+      <Card className="p-4">
+        <PaymentPlanPicker
+          value={paymentPlan}
+          onChange={onChangePaymentPlan}
+          total={priced.totals.total}
+        />
       </Card>
 
       <AlertBanner variant="info" message={es.orders.review.estimate} />

@@ -1,5 +1,6 @@
 import { OrderEntity } from '@/core/entities/order.entity';
 import type { BillingSyncStatus } from '@/core/types/customer.types';
+import { PAYMENT_PLAN_TYPES } from '@/core/types/collection.types';
 import { ORDER_STATUSES, type PriceAdjustment } from '@/core/types/order.types';
 import type { OrderResponseDto, PriceAdjustmentDto } from '@/infrastructure/api/dto/order.dto';
 import { pickEnum } from './enum.mapper';
@@ -19,6 +20,11 @@ export class OrderMapper {
       taxTotal: dto.taxTotal,
       total: dto.total,
       estimatedDeliveryDate: dto.estimatedDeliveryDate ?? null,
+      paymentPlan: {
+        type: pickEnum(dto.paymentPlan?.type ?? 'SINGLE', PAYMENT_PLAN_TYPES, 'SINGLE'),
+        installments: dto.paymentPlan?.installments ?? 1,
+        firstDueDate: dto.paymentPlan?.firstDueDate ?? dto.estimatedDeliveryDate ?? null,
+      },
       notes: dto.notes ?? null,
       billingSyncStatus: pickEnum<BillingSyncStatus>(
         dto.billingSyncStatus,

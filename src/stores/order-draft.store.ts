@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { PaymentPlanType } from '@/core/types/collection.types';
 import type { DateKey } from '@/shared/utils/date';
 import { zustandMmkvStorage } from '@/infrastructure/storage/mmkv-storage.adapter';
 
@@ -12,6 +13,8 @@ export interface OrderDraft {
   notes: string;
   /** Local delivery day; null = server default (one week). */
   deliveryDate: DateKey | null;
+  /** How the customer pays; null = once, on the delivery day. */
+  paymentPlan: { type: PaymentPlanType; installments: number; firstDueDate: DateKey } | null;
 }
 
 /** One draft per visit, or per customer when the order is taken outside a visit. */
@@ -23,17 +26,20 @@ interface OrderDraftState {
   drafts: Record<string, OrderDraft>;
   setQuantity: (
     key: string,
-    base: Omit<OrderDraft, 'quantities' | 'notes' | 'deliveryDate'>,
+    base: Omit<OrderDraft, 'quantities' | 'notes' | 'deliveryDate' | 'paymentPlan'>,
     productId: string,
     quantity: number,
   ) => void;
-  updateDraft: (key: string, patch: Partial<Pick<OrderDraft, 'notes' | 'deliveryDate'>>) => void;
+  updateDraft: (
+    key: string,
+    patch: Partial<Pick<OrderDraft, 'notes' | 'deliveryDate' | 'paymentPlan'>>,
+  ) => void;
   clearDraft: (key: string) => void;
   clearAll: () => void;
 }
 
 function emptyDraft(base: Pick<OrderDraft, 'customerId' | 'visitId'>): OrderDraft {
-  return { ...base, quantities: {}, notes: '', deliveryDate: null };
+  return { ...base, quantities: {}, notes: '', deliveryDate: null, paymentPlan: null };
 }
 
 /**

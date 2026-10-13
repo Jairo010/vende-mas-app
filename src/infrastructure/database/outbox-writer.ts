@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { LocalSyncStatus } from '@/core/types/visit.types';
 import type { NewOutboxOperation, SyncEntityType } from '@/core/types/sync.types';
 import type { AppDatabase } from './database.types';
-import { customers, orders, outbox, pendingPhotos, visits } from './schema';
+import { customers, orders, outbox, payments, pendingPhotos, visits } from './schema';
 
 /** The database or an open transaction (both expose the same synchronous query API). */
 export type DbExecutor = Pick<AppDatabase, 'select' | 'insert' | 'update' | 'delete'>;
@@ -97,6 +97,9 @@ export function setEntitySyncStatus(
       break;
     case 'ORDER':
       db.update(orders).set({ syncStatus: status }).where(eq(orders.id, entityId)).run();
+      break;
+    case 'PAYMENT':
+      db.update(payments).set({ syncStatus: status }).where(eq(payments.id, entityId)).run();
       break;
   }
 }

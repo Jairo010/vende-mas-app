@@ -18,6 +18,13 @@ import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import { OrderCatalog } from '@/presentation/features/orders/order-catalog';
 import { OrderCustomerPicker } from '@/presentation/features/orders/order-customer-picker';
 import { OrderReview } from '@/presentation/features/orders/order-review';
+import {
+  defaultPaymentPlan,
+  toPaymentPlanInput,
+} from '@/presentation/features/orders/payment-plan-picker';
+import { CustomerBalanceCard } from '@/presentation/features/collections/customer-balance-card';
+import { useCollectionsSettings } from '@/application/hooks/collections/use-collections-settings';
+import { useCustomerBalance } from '@/application/hooks/collections/use-customer-balance';
 import { es } from '@/shared/i18n/es';
 import { toZonedIsoString, zonedInstant } from '@/shared/utils/date';
 import { formatCurrency } from '@/shared/utils/format-currency';
@@ -88,7 +95,12 @@ export default function NewOrderScreen() {
   }, [cartProducts, cartReady, productIds, quantities, promotions]);
 
   const itemCount = priced.lines.reduce((sum, line) => sum + line.quantity, 0);
-  const canTakeOrders = customer?.canTakeOrders() ?? false;
+  const { settings } = useCollectionsSettings();
+  const { balance } = useCustomerBalance(customerId ?? undefined);
+  // Credit rule (server setting): no new orders while installments are overdue.
+  const blockedByOverdue = settings.blockOrdersWhenOverdue && balance.overdue > 0;
+  const canTakeOrders = (customer?.canTakeOrders() ?? false) && !blockedByOverdue;
+  const paymentPlan = draft?.paymentPlan ?? defaultPaymentPlan(draft?.deliveryDate ?? null);
 
   const changeQuantity = (productId: string, quantity: number) => {
     if (!customerId || !key) return;
@@ -113,6 +125,7 @@ export default function NewOrderScreen() {
           ? toZonedIsoString(zonedInstant(draft.deliveryDate, '12:00'))
           : undefined,
         notes: draft?.notes.trim() || undefined,
+        paymentPlan: toPaymentPlanInput(paymentPlan),
       });
       clearDraft(key);
       // An order visit now has its natural outcome preselected for the check-out.
@@ -152,7 +165,26 @@ export default function NewOrderScreen() {
         </View>
       ) : null}
 
-      {step !== 'customer' && customer && !canTakeOrders ? (
+      {step !== 'customer' && customer?.canTakeOrders() && blockedByOverdue ? (
+        <View className="gap-3 p-4">
+          <AlertBanner
+            variant="error"
+            title={es.collections.overdueBlock.title}
+            message={es.collections.overdueBlock.description}
+          />
+          <CustomerBalanceCard
+            balance={balance}
+            onCollect={() =>
+              router.push({
+                pathname: '/(app)/payment/new',
+                params: { customerId: customer.id, ...(visitId && { visitId }) },
+              })
+            }
+          />
+        </View>
+      ) : null}
+
+      {step !== 'customer' && customer && !customer.canTakeOrders() ? (
         <View className="gap-3 p-4">
           <AlertBanner variant="warning" message={es.orders.onlyActive} />
           {customer.isProspect() ? (
@@ -220,6 +252,8 @@ export default function NewOrderScreen() {
               onChangeDeliveryDate={(date) => key && updateDraft(key, { deliveryDate: date })}
               notes={draft?.notes ?? ''}
               onChangeNotes={(notes) => key && updateDraft(key, { notes })}
+              paymentPlan={paymentPlan}
+              onChangePaymentPlan={(plan) => key && updateDraft(key, { paymentPlan: plan })}
             />
           </ScrollView>
           <StickyFooter>

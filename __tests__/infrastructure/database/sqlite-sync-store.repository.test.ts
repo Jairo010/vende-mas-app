@@ -25,6 +25,9 @@ function emptyChanges(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     products: [],
     categories: [],
     promotions: [],
+    receivables: [],
+    payments: [],
+    settings: null,
     ...overrides,
   };
 }
@@ -186,6 +189,7 @@ describe('SqliteSyncStoreRepository', () => {
       taxTotal: 1.5,
       total: 11.5,
       estimatedDeliveryDate: null,
+      paymentPlan: { type: 'SINGLE', installments: 1, firstDueDate: null },
       notes: null,
       billingSyncStatus: 'EXPORTED',
       invoiceNumber: null,

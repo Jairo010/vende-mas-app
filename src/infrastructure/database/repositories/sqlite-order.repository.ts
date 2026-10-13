@@ -3,6 +3,7 @@ import type { OrderEntity } from '@/core/entities/order.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
 import {
   OrderCustomerNotActiveError,
+  OrderCustomerOverdueError,
   OrderEmptyError,
   OrderNotFoundError,
   OrderProductUnavailableError,
@@ -11,9 +12,17 @@ import type { IOrderRepositoryPort } from '@/core/ports/order.repository.port';
 import type { ActorContext } from '@/core/ports/visit.repository.port';
 import type { CreateOrderInput, OrderFilter } from '@/core/types/order.types';
 import { priceOrder } from '@/core/value-objects/order-pricing';
+import {
+  buildSchedule,
+  fromCents,
+  overdueAmountOf,
+  toCents,
+} from '@/core/value-objects/payment-schedule';
+import type { PaymentPlanType } from '@/core/types/collection.types';
 import type { CreateOrderRequestDto } from '@/infrastructure/api/dto/order.dto';
 import { toZonedIsoString } from '@/shared/utils/date';
 import { CatalogRowMapper } from '../mappers/catalog-row.mapper';
+import { readCollectionsSettings } from '../collections-settings.store';
 import { CustomerRowMapper } from '../mappers/customer-row.mapper';
 import { OrderRowMapper, type OrderItemRow, type OrderRow } from '../mappers/order-row.mapper';
 import {
@@ -22,10 +31,22 @@ import {
   enqueueOperation,
   type DbExecutor,
 } from '../outbox-writer';
-import { customers, orderItems, orders, products, promotions } from '../schema';
+import {
+  customers,
+  orderItems,
+  orders,
+  products,
+  promotions,
+  receivableInstallments,
+  receivables,
+} from '../schema';
 import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
 
 const DEFAULT_ORDER_LIMIT = 100;
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Same defaults as the API: delivery in a week; weekly plans start a week after delivery. */
+const DEFAULT_DELIVERY_DAYS = 7;
+const WEEKLY_FIRST_PAYMENT_DAYS = 7;
 
 export class SqliteOrderRepository implements IOrderRepositoryPort {
   constructor(private readonly ctx: RepositoryContext = defaultRepositoryContext) {}
@@ -68,6 +89,7 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
       if (!customerRow) throw new CustomerNotFoundError();
       const customer = CustomerRowMapper.toDomain(customerRow);
       if (!customer.canTakeOrders()) throw new OrderCustomerNotActiveError();
+      this.assertNoOverdueBalance(tx, customer.id, now);
 
       const items = input.items.map((item) => {
         const product = tx.select().from(products).where(eq(products.id, item.productId)).get();
@@ -102,6 +124,17 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
         } satisfies OrderItemRow;
       });
 
+      const deliveryDate = input.estimatedDeliveryDate
+        ? new Date(input.estimatedDeliveryDate)
+        : new Date(now.getTime() + DEFAULT_DELIVERY_DAYS * DAY_MS);
+      const planType: PaymentPlanType = input.paymentPlan?.type ?? 'SINGLE';
+      const installmentsCount = planType === 'WEEKLY' ? (input.paymentPlan?.installments ?? 2) : 1;
+      const firstDueDate = input.paymentPlan?.firstDueDate
+        ? new Date(input.paymentPlan.firstDueDate)
+        : planType === 'WEEKLY'
+          ? new Date(deliveryDate.getTime() + WEEKLY_FIRST_PAYMENT_DAYS * DAY_MS)
+          : deliveryDate;
+
       tx.insert(orders)
         .values({
           id,
@@ -112,7 +145,10 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
           sellerId: actor.userId,
           status: 'CONFIRMED',
           ...totals,
-          estimatedDeliveryDate: input.estimatedDeliveryDate ?? null,
+          estimatedDeliveryDate: deliveryDate.toISOString(),
+          paymentPlanType: planType,
+          installmentsCount,
+          firstDueDate: firstDueDate.toISOString(),
           notes: input.notes ?? null,
           billingSyncStatus: 'PENDING',
           syncStatus: 'PENDING',
@@ -121,6 +157,39 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
         })
         .run();
       tx.insert(orderItems).values(lines).run();
+
+      // Its account receivable, with the order id (the server creates the same one), so a
+      // down payment can be collected before the order is synced.
+      tx.insert(receivables)
+        .values({
+          id,
+          customerId: customer.id,
+          sellerId: actor.userId,
+          orderId: id,
+          source: 'ORDER',
+          documentNumber: '',
+          planType,
+          issuedAt: nowIso,
+          total: totals.total,
+          status: 'OPEN',
+          syncStatus: 'PENDING',
+          updatedAt: nowIso,
+        })
+        .run();
+      tx.insert(receivableInstallments)
+        .values(
+          buildSchedule(totals.total, planType, installmentsCount, firstDueDate).map(
+            (installment) => ({
+              id: this.ctx.newId(),
+              receivableId: id,
+              number: installment.number,
+              dueDate: installment.dueDate,
+              amount: installment.amount,
+              status: 'PENDING',
+            }),
+          ),
+        )
+        .run();
 
       const payload: CreateOrderRequestDto = {
         id,
@@ -131,8 +200,14 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
           quantity: line.quantity,
           expectedUnitPrice: line.unitPrice,
         })),
-        estimatedDeliveryDate: input.estimatedDeliveryDate,
+        // Explicit dates: the server builds exactly the same installments.
+        estimatedDeliveryDate: toZonedIsoString(deliveryDate),
         notes: input.notes,
+        paymentPlan: {
+          type: planType,
+          ...(planType === 'WEEKLY' && { installments: installmentsCount }),
+          firstDueDate: toZonedIsoString(firstDueDate),
+        },
       };
       enqueueOperation(
         tx,
@@ -151,6 +226,30 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
       if (!row) throw new OrderNotFoundError();
       return OrderRowMapper.toDomain(row, lines);
     });
+  }
+
+  /** Credit rule from the server settings: no new orders while installments are overdue. */
+  private assertNoOverdueBalance(db: DbExecutor, customerId: string, now: Date): void {
+    const settings = readCollectionsSettings(db);
+    if (!settings.blockOrdersWhenOverdue) return;
+    const installments = db
+      .select({
+        id: receivableInstallments.id,
+        number: receivableInstallments.number,
+        dueDate: receivableInstallments.dueDate,
+        amount: receivableInstallments.amount,
+        paidAmount: receivableInstallments.paidAmount,
+        status: receivableInstallments.status,
+      })
+      .from(receivableInstallments)
+      .innerJoin(receivables, eq(receivables.id, receivableInstallments.receivableId))
+      .where(and(eq(receivables.customerId, customerId), eq(receivables.status, 'OPEN')))
+      .all()
+      .map((row) => ({ ...row, status: row.status as 'PENDING' | 'PARTIAL' | 'PAID' }));
+    const overdue = overdueAmountOf(installments, now, settings.overdueGraceDays);
+    if (toCents(overdue) > 0) {
+      throw new OrderCustomerOverdueError(`$${fromCents(toCents(overdue)).toFixed(2)}`);
+    }
   }
 
   private withItems(db: DbExecutor, rows: OrderRow[]): OrderEntity[] {

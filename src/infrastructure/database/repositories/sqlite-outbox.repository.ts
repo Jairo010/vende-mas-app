@@ -3,8 +3,9 @@ import { OrderMapper } from '@/application/mappers/order.mapper';
 import type { IOutboxPort } from '@/core/ports/sync.ports';
 import type { OutboxOperation, SyncEntityType, SyncError } from '@/core/types/sync.types';
 import { OutboxRowMapper } from '../mappers/outbox-row.mapper';
-import { refreshEntitySyncStatus } from '../outbox-writer';
-import { orders, outbox } from '../schema';
+import { fromCents, toCents } from '@/core/value-objects/payment-schedule';
+import { refreshEntitySyncStatus, type DbExecutor } from '../outbox-writer';
+import { orders, outbox, payments, receivableInstallments, receivables } from '../schema';
 import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
 
 export class SqliteOutboxRepository implements IOutboxPort {
@@ -110,8 +111,56 @@ export class SqliteOutboxRepository implements IOutboxPort {
       const row = tx.select().from(outbox).where(eq(outbox.seq, seq)).get();
       if (!row) return;
       tx.delete(outbox).where(eq(outbox.seq, seq)).run();
+      if (row.entityType === 'PAYMENT' && row.action === 'CREATE') {
+        // The server never accepted it: give the money back to the installments.
+        SqliteOutboxRepository.revertPayment(tx, row.entityId);
+        return;
+      }
       refreshEntitySyncStatus(tx, row.entityType as SyncEntityType, row.entityId);
     });
+  }
+
+  private static revertPayment(tx: DbExecutor, paymentId: string): void {
+    const payment = tx.select().from(payments).where(eq(payments.id, paymentId)).get();
+    if (!payment) return;
+    for (const allocation of payment.allocations) {
+      const installment = tx
+        .select()
+        .from(receivableInstallments)
+        .where(eq(receivableInstallments.id, allocation.installmentId))
+        .get();
+      if (!installment) continue;
+      const paidCents = Math.max(0, toCents(installment.paidAmount) - toCents(allocation.amount));
+      tx.update(receivableInstallments)
+        .set({
+          paidAmount: fromCents(paidCents),
+          status:
+            paidCents >= toCents(installment.amount)
+              ? 'PAID'
+              : paidCents > 0
+                ? 'PARTIAL'
+                : 'PENDING',
+        })
+        .where(eq(receivableInstallments.id, installment.id))
+        .run();
+    }
+    const receivable = tx
+      .select()
+      .from(receivables)
+      .where(eq(receivables.id, payment.receivableId))
+      .get();
+    if (receivable) {
+      tx.update(receivables)
+        .set({
+          paidAmount: fromCents(
+            Math.max(0, toCents(receivable.paidAmount) - toCents(payment.amount)),
+          ),
+          status: receivable.status === 'PAID' ? 'OPEN' : receivable.status,
+        })
+        .where(eq(receivables.id, receivable.id))
+        .run();
+    }
+    tx.delete(payments).where(eq(payments.id, paymentId)).run();
   }
 }
 

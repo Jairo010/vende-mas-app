@@ -32,6 +32,8 @@ export interface OrderResponseDto {
   taxTotal: number;
   total: number;
   estimatedDeliveryDate?: string | null;
+  /** Older servers did not send it: a single payment on delivery. */
+  paymentPlan?: { type: string; installments: number; firstDueDate: string } | null;
   notes?: string | null;
   items: OrderItemResponseDto[];
   customer?: OrderCustomerSummaryDto | null;
@@ -56,4 +58,5 @@ export interface CreateOrderRequestDto {
   items: { productId: string; quantity: number; expectedUnitPrice?: number }[];
   estimatedDeliveryDate?: string;
   notes?: string;
+  paymentPlan?: { type: string; installments?: number; firstDueDate?: string };
 }

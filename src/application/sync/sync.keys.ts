@@ -16,5 +16,6 @@ export const LOCAL_DATA_QUERY_ROOTS: readonly QueryKey[] = [
   ['customers'],
   ['orders'],
   ['catalog'],
+  ['collections'],
   syncKeys.all,
 ];

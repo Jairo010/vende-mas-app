@@ -1,4 +1,5 @@
 import { OrderEntity, type OrderItem } from '@/core/entities/order.entity';
+import type { PaymentPlanType } from '@/core/types/collection.types';
 import type { BillingSyncStatus } from '@/core/types/customer.types';
 import type { OrderStatus } from '@/core/types/order.types';
 import type { LocalSyncStatus } from '@/core/types/visit.types';
@@ -23,6 +24,11 @@ export class OrderRowMapper {
       taxTotal: row.taxTotal,
       total: row.total,
       estimatedDeliveryDate: row.estimatedDeliveryDate,
+      paymentPlan: {
+        type: row.paymentPlanType as PaymentPlanType,
+        installments: row.installmentsCount,
+        firstDueDate: row.firstDueDate,
+      },
       notes: row.notes,
       billingSyncStatus: row.billingSyncStatus as BillingSyncStatus,
       invoiceNumber: row.invoiceNumber,
@@ -65,6 +71,9 @@ export class OrderRowMapper {
       taxTotal: entity.taxTotal,
       total: entity.total,
       estimatedDeliveryDate: entity.estimatedDeliveryDate,
+      paymentPlanType: entity.paymentPlan.type,
+      installmentsCount: entity.paymentPlan.installments,
+      firstDueDate: entity.paymentPlan.firstDueDate,
       notes: entity.notes,
       billingSyncStatus: entity.billingSyncStatus,
       invoiceNumber: entity.invoiceNumber,

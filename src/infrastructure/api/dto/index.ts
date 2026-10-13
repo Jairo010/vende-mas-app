@@ -6,3 +6,4 @@ export * from './catalog.dto';
 export * from './order.dto';
 export * from './sync.dto';
 export * from './user.dto';
+export * from './collection.dto';

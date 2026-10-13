@@ -27,6 +27,16 @@ export class OrderEmptyError extends DomainError {
   }
 }
 
+export class OrderCustomerOverdueError extends DomainError {
+  public readonly code = 'ORDER_CUSTOMER_HAS_OVERDUE_BALANCE';
+
+  constructor(overdue: string) {
+    super(`El cliente tiene ${overdue} vencido: cóbralo antes de tomar un pedido nuevo`, 422, {
+      overdue,
+    });
+  }
+}
+
 export class OrderProductUnavailableError extends DomainError {
   public readonly code = 'ORDER_PRODUCT_UNAVAILABLE';
 

@@ -62,6 +62,9 @@ describe('SqliteOrderRepository', () => {
         { productId: 'product-1', quantity: 12, expectedUnitPrice: 7.8 },
         { productId: 'product-2', quantity: 3, expectedUnitPrice: 3.25 },
       ],
+      // Explicit dates so the server builds exactly the same installments.
+      estimatedDeliveryDate: '2026-10-21T09:30:00-05:00',
+      paymentPlan: { type: 'SINGLE', firstDueDate: '2026-10-21T09:30:00-05:00' },
     });
 
     const [listed] = await repository.findAll({ visitId: 'visit-1' });

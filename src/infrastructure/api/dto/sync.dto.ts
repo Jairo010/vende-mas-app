@@ -1,4 +1,9 @@
 import type { CategoryResponseDto, ProductResponseDto, PromotionResponseDto } from './catalog.dto';
+import type {
+  CollectionPaymentResponseDto,
+  ReceivableResponseDto,
+  SyncSettingsDto,
+} from './collection.dto';
 import type { CustomerResponseDto } from './customer.dto';
 import type { OrderResponseDto } from './order.dto';
 import type { VisitResponseDto } from './visit.dto';
@@ -51,6 +56,10 @@ export interface SyncPullResponseDto {
   products: ProductResponseDto[];
   categories: CategoryResponseDto[];
   promotions: PromotionResponseDto[];
+  /** Absent on servers without collections. */
+  receivables?: ReceivableResponseDto[];
+  payments?: CollectionPaymentResponseDto[];
+  settings?: SyncSettingsDto;
 }
 
 /** `POST /files/photos` */

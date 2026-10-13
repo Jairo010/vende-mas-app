@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MessageCircle, PackageX } from 'lucide-react-native';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useOrder } from '@/application/hooks/orders/use-order';
+import { useReceivable } from '@/application/hooks/collections/use-receivable';
 import { DetailRow } from '@/presentation/components/common/detail-row';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
@@ -13,6 +14,7 @@ import { Card } from '@/presentation/components/ui/card';
 import { EmptyState } from '@/presentation/components/ui/empty-state';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
+import { InstallmentList } from '@/presentation/features/collections/installment-list';
 import { OrderLineRow } from '@/presentation/features/orders/order-line-row';
 import { shareOrderOnWhatsApp } from '@/presentation/features/orders/order-receipt';
 import { OrderTotals } from '@/presentation/features/orders/order-totals';
@@ -32,6 +34,8 @@ export default function OrderDetailScreen() {
   const colors = useThemeColors();
   const { order, isLoading } = useOrder(id);
   const { customer } = useCustomer(order?.customerId);
+  // The order's account receivable shares its id.
+  const { receivable } = useReceivable(order?.id);
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/orders');
@@ -133,6 +137,46 @@ export default function OrderDetailScreen() {
 
         <Card className="p-4">
           <OrderTotals totals={order} />
+        </Card>
+
+        <Card className="gap-3 p-4">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-base font-semibold text-foreground">
+              {es.orders.paymentPlan.title}
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {es.collections.plans[order.paymentPlan.type]}
+              {order.paymentPlan.type === 'WEEKLY'
+                ? ` · ${order.paymentPlan.installments} ${es.orders.paymentPlan.schedule.toLowerCase()}`
+                : ''}
+            </Text>
+          </View>
+          {receivable ? (
+            <>
+              <InstallmentList installments={receivable.installments} />
+              <View className="flex-row justify-between border-t border-border pt-2">
+                <Text className="text-sm text-muted-foreground">{es.collections.balance}</Text>
+                <Text className="text-sm font-bold text-foreground">
+                  {formatCurrency(receivable.balance)}
+                </Text>
+              </View>
+              {receivable.isOpen() ? (
+                <Button
+                  testID="order-collect"
+                  variant="outline"
+                  size="sm"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(app)/payment/new',
+                      params: { customerId: order.customerId, receivableId: receivable.id },
+                    })
+                  }
+                >
+                  {es.collections.register}
+                </Button>
+              ) : null}
+            </>
+          ) : null}
         </Card>
 
         {order.isPendingSync() && order.syncStatus !== 'REJECTED' ? (

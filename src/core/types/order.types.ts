@@ -8,6 +8,8 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+import type { PaymentPlanInput } from './collection.types';
+
 export interface OrderFilter {
   customerId?: string;
   visitId?: string;
@@ -26,6 +28,8 @@ export interface CreateOrderInput {
   /** ISO instant; the server defaults it to one week after the order. */
   estimatedDeliveryDate?: string;
   notes?: string;
+  /** Defaults to a single payment on the delivery date. */
+  paymentPlan?: PaymentPlanInput;
 }
 
 export interface PriceAdjustment {

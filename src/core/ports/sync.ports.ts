@@ -1,7 +1,10 @@
 import type { CustomerEntity } from '../entities/customer.entity';
 import type { OrderEntity } from '../entities/order.entity';
 import type { ProductEntity } from '../entities/product.entity';
+import type { PaymentEntity } from '../entities/payment.entity';
+import type { ReceivableEntity } from '../entities/receivable.entity';
 import type { VisitEntity } from '../entities/visit.entity';
+import type { CollectionsSettings } from '../types/collection.types';
 import type { Category, Promotion } from '../types/catalog.types';
 import type {
   OutboxOperation,
@@ -59,6 +62,10 @@ export interface SyncChangeSet {
   categories: Category[];
   /** Full list of active promotions: replaces the local one. */
   promotions: Promotion[];
+  receivables: ReceivableEntity[];
+  payments: PaymentEntity[];
+  /** Credit rules (server configuration) applied offline. */
+  settings: CollectionsSettings | null;
 }
 
 /** Remote side of the sync protocol (docs/sync-protocol.md in the API). */

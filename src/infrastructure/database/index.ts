@@ -8,3 +8,5 @@ export * from './repositories/sqlite-order.repository';
 export * from './repositories/sqlite-outbox.repository';
 export * from './repositories/sqlite-pending-photo.repository';
 export * from './repositories/sqlite-sync-store.repository';
+export * from './repositories/sqlite-collection.repository';
+export * from './collections-settings.store';

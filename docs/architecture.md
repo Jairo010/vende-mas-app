@@ -240,3 +240,12 @@ order/[id] ──► official number / pending badge, price adjustments, WhatsAp
 customers ──► search · detail (photo, shortcuts, history) · billing form · lookup by RUC (online)
 sync ──► state, rejected (retry = requeue, discard), pending queue in push order
 ```
+
+## 10. Collections (ADR 0006)
+
+```text
+order review ──► payment plan (once / weekly) ──► local receivable (id = order id) + installments
+visit COLLECTION / customer ──► CollectionPanel ──► payment/new ──► useRegisterPayment
+   SqliteCollectionRepository: oldest installment first, never above the balance, PAYMENT CREATE
+pull ──► receivables, payments, settings (credit rule) ──► order screen blocks overdue customers
+```

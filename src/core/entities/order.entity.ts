@@ -1,3 +1,4 @@
+import type { PaymentPlan } from '../types/collection.types';
 import type { BillingSyncStatus } from '../types/customer.types';
 import type { OrderStatus, PriceAdjustment } from '../types/order.types';
 import type { LocalSyncStatus } from '../types/visit.types';
@@ -31,6 +32,7 @@ export interface OrderProps {
   taxTotal: number;
   total: number;
   estimatedDeliveryDate: string | null;
+  paymentPlan: PaymentPlan;
   notes: string | null;
   billingSyncStatus: BillingSyncStatus;
   invoiceNumber: string | null;
@@ -55,6 +57,7 @@ export class OrderEntity {
   public readonly taxTotal: number;
   public readonly total: number;
   public readonly estimatedDeliveryDate: string | null;
+  public readonly paymentPlan: PaymentPlan;
   public readonly notes: string | null;
   public readonly billingSyncStatus: BillingSyncStatus;
   public readonly invoiceNumber: string | null;
@@ -77,6 +80,7 @@ export class OrderEntity {
     this.taxTotal = props.taxTotal;
     this.total = props.total;
     this.estimatedDeliveryDate = props.estimatedDeliveryDate;
+    this.paymentPlan = props.paymentPlan;
     this.notes = props.notes;
     this.billingSyncStatus = props.billingSyncStatus;
     this.invoiceNumber = props.invoiceNumber;

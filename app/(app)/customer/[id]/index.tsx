@@ -23,6 +23,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { EmptyState } from '@/presentation/components/ui/empty-state';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
+import { CollectionPanel } from '@/presentation/features/collections/collection-panel';
 import { CustomerHistory } from '@/presentation/features/customers/customer-history';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
@@ -183,6 +184,21 @@ export default function CustomerDetailScreen() {
           >
             {es.visits.actions.completeBilling}
           </Button>
+        ) : null}
+
+        {customer.canTakeOrders() ? (
+          <CollectionPanel
+            customerId={customer.id}
+            onCollect={(receivable) =>
+              router.push({
+                pathname: '/(app)/payment/new',
+                params: {
+                  customerId: customer.id,
+                  ...(receivable && { receivableId: receivable.id }),
+                },
+              })
+            }
+          />
         ) : null}
 
         <Card className="px-4 py-2">

@@ -1,4 +1,4 @@
-export const SYNC_ENTITY_TYPES = ['CUSTOMER', 'VISIT', 'ORDER'] as const;
+export const SYNC_ENTITY_TYPES = ['CUSTOMER', 'VISIT', 'ORDER', 'PAYMENT'] as const;
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];
 
 export type SyncAction =

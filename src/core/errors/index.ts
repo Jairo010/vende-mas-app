@@ -4,3 +4,4 @@ export * from './visit.errors';
 export * from './customer.errors';
 export * from './order.errors';
 export * from './device.errors';
+export * from './collection.errors';

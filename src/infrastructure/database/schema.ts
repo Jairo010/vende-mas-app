@@ -148,6 +148,10 @@ export const orders = sqliteTable(
     taxTotal: real('tax_total').notNull(),
     total: real('total').notNull(),
     estimatedDeliveryDate: text('estimated_delivery_date'),
+    /** SINGLE (one payment) or WEEKLY (installments every 7 days). */
+    paymentPlanType: text('payment_plan_type').notNull().default('SINGLE'),
+    installmentsCount: integer('installments_count').notNull().default(1),
+    firstDueDate: text('first_due_date'),
     notes: text('notes'),
     billingSyncStatus: text('billing_sync_status').notNull().default('NOT_REQUIRED'),
     invoiceNumber: text('invoice_number'),
@@ -185,6 +189,87 @@ export const orderItems = sqliteTable(
     promotionName: text('promotion_name'),
   },
   (table) => [index('order_items_order_id_idx').on(table.orderId)],
+);
+
+/**
+ * What customers owe, by document. Pulled from the server; the ones of orders taken offline
+ * are created locally with the order id (the server does the same).
+ */
+export const receivables = sqliteTable(
+  'receivables',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id').notNull(),
+    sellerId: text('seller_id'),
+    orderId: text('order_id'),
+    /** ORDER (taken here) or BILLING (imported debt). */
+    source: text('source').notNull(),
+    documentNumber: text('document_number').notNull(),
+    planType: text('plan_type').notNull(),
+    issuedAt: text('issued_at').notNull(),
+    total: real('total').notNull(),
+    paidAmount: real('paid_amount').notNull().default(0),
+    externalPaidAmount: real('external_paid_amount').notNull().default(0),
+    status: text('status').notNull(),
+    syncStatus: syncStatus(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('receivables_customer_id_idx').on(table.customerId),
+    index('receivables_status_idx').on(table.status),
+  ],
+);
+
+export const receivableInstallments = sqliteTable(
+  'receivable_installments',
+  {
+    id: text('id').primaryKey(),
+    receivableId: text('receivable_id')
+      .notNull()
+      .references(() => receivables.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+    dueDate: text('due_date').notNull(),
+    amount: real('amount').notNull(),
+    paidAmount: real('paid_amount').notNull().default(0),
+    status: text('status').notNull(),
+  },
+  (table) => [
+    index('receivable_installments_receivable_id_idx').on(table.receivableId),
+    index('receivable_installments_due_date_idx').on(table.dueDate),
+  ],
+);
+
+/** Payments collected by the seller (created offline, pushed as PAYMENT CREATE). */
+export const payments = sqliteTable(
+  'payments',
+  {
+    id: text('id').primaryKey(),
+    receivableId: text('receivable_id').notNull(),
+    customerId: text('customer_id').notNull(),
+    sellerId: text('seller_id').notNull(),
+    visitId: text('visit_id'),
+    amount: real('amount').notNull(),
+    method: text('method').notNull(),
+    reference: text('reference'),
+    bankName: text('bank_name'),
+    checkDate: text('check_date'),
+    photoUrl: text('photo_url'),
+    /** Receipt / check photo taken offline, shown until the server URL arrives. */
+    photoLocalUri: text('photo_local_uri'),
+    notes: text('notes'),
+    paidAt: text('paid_at').notNull(),
+    allocations: text('allocations', { mode: 'json' })
+      .$type<{ installmentId: string; installmentNumber: number; amount: number }[]>()
+      .notNull(),
+    syncStatus: syncStatus(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('payments_customer_id_idx').on(table.customerId),
+    index('payments_receivable_id_idx').on(table.receivableId),
+    index('payments_visit_id_idx').on(table.visitId),
+    index('payments_paid_at_idx').on(table.paidAt),
+  ],
 );
 
 /** Queue of mutations waiting for `POST /sync/push`, in the order they happened. */

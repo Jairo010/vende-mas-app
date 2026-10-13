@@ -7,3 +7,4 @@ export * from './order-line-row';
 export * from './order-catalog';
 export * from './order-review';
 export * from './order-customer-picker';
+export * from './payment-plan-picker';

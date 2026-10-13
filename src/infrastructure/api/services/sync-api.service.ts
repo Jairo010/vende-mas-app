@@ -1,5 +1,6 @@
 import type { AxiosInstance } from 'axios';
 import { CatalogMapper } from '@/application/mappers/catalog.mapper';
+import { CollectionMapper } from '@/application/mappers/collection.mapper';
 import { CustomerMapper } from '@/application/mappers/customer.mapper';
 import { pickEnum } from '@/application/mappers/enum.mapper';
 import { OrderMapper } from '@/application/mappers/order.mapper';
@@ -78,6 +79,9 @@ export class SyncApiService implements ISyncRemotePort {
       products: data.products.map(CatalogMapper.toProduct),
       categories: data.categories.map(CatalogMapper.toCategory),
       promotions: data.promotions.filter((p) => p.isActive).map(CatalogMapper.toPromotion),
+      receivables: (data.receivables ?? []).map(CollectionMapper.toReceivable),
+      payments: (data.payments ?? []).map(CollectionMapper.toPayment),
+      settings: CollectionMapper.toSettings(data.settings),
     };
   }
 

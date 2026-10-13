@@ -136,6 +136,19 @@ export default function VisitScreen() {
       params: { visitId: visit.id, customerId: visit.customerId },
     });
 
+  const collect = (receivable?: { id: string }) =>
+    router.push({
+      pathname: '/(app)/payment/new',
+      params: {
+        customerId: visit.customerId,
+        visitId: visit.id,
+        ...(receivable && { receivableId: receivable.id }),
+      },
+    });
+
+  const openPayment = (payment: { id: string }) =>
+    router.push({ pathname: '/(app)/payment/[id]', params: { id: payment.id } });
+
   const scheduleNext = () =>
     router.push({
       pathname: '/(app)/visit/new',
@@ -305,6 +318,8 @@ export default function VisitScreen() {
               onTakePhoto={() => void takePhoto()}
               onCompleteBilling={openBilling}
               onTakeOrder={openOrder}
+              onCollect={collect}
+              onOpenPayment={openPayment}
             />
           ) : null}
 

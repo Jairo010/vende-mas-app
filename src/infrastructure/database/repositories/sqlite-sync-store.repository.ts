@@ -1,7 +1,9 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, ne } from 'drizzle-orm';
 import type { ISyncLocalStorePort, SyncChangeSet } from '@/core/ports/sync.ports';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import { CatalogRowMapper } from '../mappers/catalog-row.mapper';
+import { CollectionRowMapper } from '../mappers/collection-row.mapper';
+import { writeCollectionsSettings } from '../collections-settings.store';
 import { CustomerRowMapper } from '../mappers/customer-row.mapper';
 import { OrderRowMapper } from '../mappers/order-row.mapper';
 import { VisitRowMapper } from '../mappers/visit-row.mapper';
@@ -12,9 +14,12 @@ import {
   orderItems,
   orders,
   outbox,
+  payments,
   pendingPhotos,
   products,
   promotions,
+  receivableInstallments,
+  receivables,
   syncMeta,
   visits,
 } from '../schema';
@@ -98,6 +103,47 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
       // Promotions always come as the full active list: replace the local one.
       tx.delete(promotions).run();
       if (changes.promotions.length > 0) tx.insert(promotions).values(changes.promotions).run();
+
+      // A receivable with payments not yet accepted keeps its local balance: the server's
+      // copy does not include them yet (the seller must not collect twice).
+      const withUnsentPayments = new Set(
+        tx
+          .select({ receivableId: payments.receivableId })
+          .from(payments)
+          .where(ne(payments.syncStatus, 'SYNCED'))
+          .all()
+          .map((row) => row.receivableId),
+      );
+      for (const receivable of changes.receivables) {
+        if (pending.has(receivable.id) || withUnsentPayments.has(receivable.id)) continue;
+        const row = CollectionRowMapper.toReceivableColumns(receivable);
+        tx.insert(receivables)
+          .values({ ...row, syncStatus: 'SYNCED' })
+          .onConflictDoUpdate({
+            target: receivables.id,
+            set: { ...withoutId(row), syncStatus: 'SYNCED' },
+          })
+          .run();
+        tx.delete(receivableInstallments)
+          .where(eq(receivableInstallments.receivableId, receivable.id))
+          .run();
+        const installments = CollectionRowMapper.toInstallmentRows(receivable);
+        if (installments.length > 0) tx.insert(receivableInstallments).values(installments).run();
+      }
+
+      for (const payment of changes.payments) {
+        if (pending.has(payment.id)) continue;
+        const row = CollectionRowMapper.toPaymentColumns(payment, payment.paidAt);
+        tx.insert(payments)
+          .values({ ...row, syncStatus: 'SYNCED' })
+          .onConflictDoUpdate({
+            target: payments.id,
+            set: { ...withoutId(row), syncStatus: 'SYNCED' },
+          })
+          .run();
+      }
+
+      if (changes.settings) writeCollectionsSettings(tx, changes.settings);
     });
   }
 
@@ -120,6 +166,9 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
   public async clearAll(): Promise<void> {
     this.ctx.db().transaction((tx) => {
       for (const table of [
+        payments,
+        receivableInstallments,
+        receivables,
         orderItems,
         orders,
         visits,

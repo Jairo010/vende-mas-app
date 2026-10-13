@@ -2,14 +2,16 @@ import { Text, View } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { VisitEntity } from '@/core/entities/visit.entity';
 import type { OrderEntity } from '@/core/entities/order.entity';
+import type { PaymentEntity } from '@/core/entities/payment.entity';
+import type { ReceivableEntity } from '@/core/entities/receivable.entity';
 import type { VisitOutcome } from '@/core/types/visit.types';
-import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { Input } from '@/presentation/components/ui/input';
 import type { VisitDraft } from '@/stores/visit-draft.store';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
+import { CollectionPanel } from '../collections/collection-panel';
 import { OutcomeSelector } from './outcome-selector';
 import { StorePhotoField } from './store-photo-field';
 import { VisitOrdersCard } from './visit-orders-card';
@@ -36,6 +38,9 @@ export interface VisitWorkPanelProps {
   onTakePhoto: () => void;
   onCompleteBilling: () => void;
   onTakeOrder: () => void;
+  /** Collection visits: register a payment (optionally for one document). */
+  onCollect: (receivable?: ReceivableEntity) => void;
+  onOpenPayment: (payment: PaymentEntity) => void;
 }
 
 /** Step 2 of a visit: what the seller does in the store, by visit type. */
@@ -53,6 +58,8 @@ export function VisitWorkPanel({
   onTakePhoto,
   onCompleteBilling,
   onTakeOrder,
+  onCollect,
+  onOpenPayment,
 }: VisitWorkPanelProps) {
   const colors = useThemeColors();
   const closingSale =
@@ -82,10 +89,11 @@ export function VisitWorkPanel({
       ) : null}
 
       {visit.type === 'COLLECTION' ? (
-        <AlertBanner
-          variant="info"
-          title={es.visits.collection.title}
-          message={es.visits.collection.description}
+        <CollectionPanel
+          customerId={visit.customerId}
+          visitId={visit.id}
+          onCollect={onCollect}
+          onOpenPayment={onOpenPayment}
         />
       ) : null}
 

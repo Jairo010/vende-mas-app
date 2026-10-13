@@ -35,7 +35,7 @@ sellers and follow them up.
 - **Work by type**: OPPORTUNITY → store photo (required when the customer has none), outcome,
   and "close sale" (requires billing data: the prospect is promoted in
   `customer/[id]/billing`, then the order can be taken); ORDER → linked orders + "Armar
-  pedido"; COLLECTION → notes (payments arrive with the collections phase).
+  pedido"; COLLECTION → the collections panel (ADR 0006).
 - **Draft**: outcome, notes and photo URI are persisted per visit in MMKV
   (`visit-draft.store.ts`) so a call or the OS killing the app does not lose them. Photos are
   copied out of the camera cache immediately. Logout clears drafts.

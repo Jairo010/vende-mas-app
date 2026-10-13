@@ -334,6 +334,12 @@ export const es = {
         'Con estos datos el prospecto pasa a cliente activo y se envía al sistema de facturación.',
       submit: 'Guardar y activar cliente',
       promoted: 'Cliente activado',
+      lookup: 'Buscar por RUC / cédula',
+      notRegistered: 'No está registrado: se creará como cliente nuevo',
+      registeredTitle: 'Ya es cliente',
+      registeredDescription:
+        'Este RUC ya está registrado. Al guardar, la visita y la venta pasan a ese cliente (no se crea otro).',
+      mergedInto: 'La venta se registró para el cliente',
       alreadyActive: 'Este cliente ya tiene datos de facturación.',
       placeholders: {
         identification: {

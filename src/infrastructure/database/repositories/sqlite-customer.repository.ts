@@ -29,7 +29,7 @@ import {
   registerPendingPhoto,
   type DbExecutor,
 } from '../outbox-writer';
-import { customers } from '../schema';
+import { customers, orders, visits } from '../schema';
 import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
 
 const DEFAULT_SEARCH_LIMIT = 50;
@@ -212,7 +212,6 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
       const customer = this.loadOrThrow(tx, id);
       if (!customer.isProspect()) throw new CustomerAlreadyActiveError();
       const identification = normalizeIdentification(input.identification);
-      this.assertIdentificationFree(tx, identification, id);
 
       const payload: PromoteCustomerRequestDto = {
         businessName: input.businessName.trim(),
@@ -223,6 +222,25 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
         phone: clean(input.phone),
         contactName: clean(input.contactName),
       };
+
+      // The RUC / cédula already belongs to a registered customer: the prospect was that
+      // customer. Same rule as the API (which merges when it applies this PROMOTE).
+      const owner = tx
+        .select()
+        .from(customers)
+        .where(and(eq(customers.identification, identification), ne(customers.id, id)))
+        .get();
+      if (owner) {
+        const merged = this.mergeLocally(
+          tx,
+          customer,
+          CustomerRowMapper.toDomain(owner),
+          payload,
+          nowIso,
+        );
+        this.enqueue(tx, id, 'PROMOTE', compactPayload(payload), now);
+        return merged;
+      }
 
       tx.update(customers)
         .set({
@@ -268,6 +286,50 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
       },
       now.toISOString(),
     );
+  }
+
+  /**
+   * Moves the prospect's visits and orders to the registered customer, lets that customer
+   * take over what it is missing (photo, location, contact) and removes the prospect.
+   */
+  private mergeLocally(
+    tx: DbExecutor,
+    prospect: CustomerEntity,
+    owner: CustomerEntity,
+    billing: PromoteCustomerRequestDto,
+    nowIso: string,
+  ): CustomerEntity {
+    const ownerHasLocation = owner.hasLocation();
+    tx.update(customers)
+      .set({
+        ...(owner.isProspect() && {
+          status: 'ACTIVE',
+          businessName: billing.businessName,
+          identificationType: billing.identificationType,
+          address: billing.address,
+          email: billing.email,
+          billingSyncStatus: 'PENDING',
+        }),
+        contactName: owner.contactName ?? prospect.contactName,
+        phone: owner.phone ?? prospect.phone,
+        addressReference: owner.addressReference ?? prospect.addressReference,
+        latitude: ownerHasLocation ? owner.latitude : prospect.latitude,
+        longitude: ownerHasLocation ? owner.longitude : prospect.longitude,
+        ...(!owner.hasStorePhoto() && {
+          storePhotoUrl: prospect.storePhotoUrl,
+          storePhotoLocalUri: prospect.storePhotoLocalUri,
+        }),
+        updatedAt: nowIso,
+      })
+      .where(eq(customers.id, owner.id))
+      .run();
+    tx.update(visits).set({ customerId: owner.id }).where(eq(visits.customerId, prospect.id)).run();
+    tx.update(orders)
+      .set({ customerId: owner.id, customerName: owner.tradeName })
+      .where(eq(orders.customerId, prospect.id))
+      .run();
+    tx.delete(customers).where(eq(customers.id, prospect.id)).run();
+    return this.loadOrThrow(tx, owner.id);
   }
 
   /** Identifications are unique (the API rejects duplicates): catch it before queuing. */

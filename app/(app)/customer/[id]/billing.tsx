@@ -15,7 +15,7 @@ import { useThemeColors } from '@/theme';
 
 /** Billing data of a prospect (PROSPECT → ACTIVE). Opened from the visit or the customer. */
 export default function CustomerBillingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const colors = useThemeColors();
   const { customer, isLoading } = useCustomer(id);
@@ -24,8 +24,19 @@ export default function CustomerBillingScreen() {
   const submit = async (data: PromoteCustomerFormData) => {
     if (!customer) return;
     try {
-      await promoteCustomer({ id: customer.id, ...data });
-      notify.success(es.customers.billing.promoted, es.visits.toasts.queued);
+      const result = await promoteCustomer({ id: customer.id, ...data });
+      if (result.id !== customer.id) {
+        // The RUC was a registered customer: the prospect was merged into it.
+        notify.success(es.customers.billing.mergedInto, result.tradeName);
+        if (from === 'customer') {
+          // The prospect's card no longer exists: show the registered customer instead.
+          router.back();
+          router.replace({ pathname: '/(app)/customer/[id]', params: { id: result.id } });
+          return;
+        }
+      } else {
+        notify.success(es.customers.billing.promoted, es.visits.toasts.queued);
+      }
       router.back();
     } catch (error) {
       notify.error(error);

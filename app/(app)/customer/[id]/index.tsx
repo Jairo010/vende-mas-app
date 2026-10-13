@@ -175,7 +175,10 @@ export default function CustomerDetailScreen() {
             testID="customer-complete-billing"
             leftIcon={<FileText size={16} color={colors.primaryForeground} />}
             onPress={() =>
-              router.push({ pathname: '/(app)/customer/[id]/billing', params: { id: customer.id } })
+              router.push({
+                pathname: '/(app)/customer/[id]/billing',
+                params: { id: customer.id, from: 'customer' },
+              })
             }
           >
             {es.visits.actions.completeBilling}

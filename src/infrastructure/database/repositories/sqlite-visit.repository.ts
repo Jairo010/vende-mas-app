@@ -1,16 +1,23 @@
 import { and, asc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
-import { VisitNotFoundError, VisitStorePhotoRequiredError } from '@/core/errors/visit.errors';
+import {
+  VisitAlreadyInProgressError,
+  VisitCustomerNotInvoiceableError,
+  VisitNotFoundError,
+  VisitParentNotFoundError,
+  VisitStorePhotoRequiredError,
+} from '@/core/errors/visit.errors';
 import type { ActorContext, IVisitRepositoryPort } from '@/core/ports/visit.repository.port';
 import type { GeoPoint } from '@/core/types/geo.types';
-import type {
-  CancelVisitInput,
-  CompleteVisitInput,
-  RescheduleVisitInput,
-  ScheduleVisitInput,
-  StartVisitInput,
-  VisitFilter,
+import {
+  VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER,
+  type CancelVisitInput,
+  type CompleteVisitInput,
+  type RescheduleVisitInput,
+  type ScheduleVisitInput,
+  type StartVisitInput,
+  type VisitFilter,
 } from '@/core/types/visit.types';
 import { distanceInMeters } from '@/core/value-objects/geo-distance';
 import type {
@@ -88,7 +95,18 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     const sellerId = input.sellerId ?? actor.userId;
 
     return this.ctx.db().transaction((tx) => {
-      this.requireCustomer(tx, input.customerId);
+      const customer = this.requireCustomer(tx, input.customerId);
+      if (
+        VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER.includes(input.type) &&
+        customer.status !== 'ACTIVE'
+      ) {
+        throw new VisitCustomerNotInvoiceableError(
+          'Solo los clientes activos reciben visitas de pedido o cobro',
+        );
+      }
+      if (input.parentVisitId && !this.load(tx, input.parentVisitId)) {
+        throw new VisitParentNotFoundError();
+      }
 
       tx.insert(visits)
         .values({
@@ -131,7 +149,16 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
       const visit = this.loadOrThrow(tx, id);
       visit.assertCanStart();
 
+      // Same rule as the API: one visit in progress per seller.
+      const active = tx
+        .select({ id: visits.id })
+        .from(visits)
+        .where(and(eq(visits.sellerId, visit.sellerId), eq(visits.status, 'IN_PROGRESS')))
+        .get();
+      if (active && active.id !== id) throw new VisitAlreadyInProgressError(active.id);
+
       const customer = visit.customer;
+      const customerHasLocation = customer?.latitude != null && customer.longitude != null;
       const distance =
         input.location && customer?.latitude != null && customer.longitude != null
           ? distanceInMeters(input.location, {
@@ -154,6 +181,19 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         .where(eq(visits.id, id))
         .run();
 
+      // The first check-in at a store without coordinates pins its location (the server
+      // does the same when it applies the check-in).
+      if (input.location && customer && !customerHasLocation) {
+        tx.update(customers)
+          .set({
+            latitude: input.location.latitude,
+            longitude: input.location.longitude,
+            updatedAt: nowIso,
+          })
+          .where(eq(customers.id, customer.id))
+          .run();
+      }
+
       const payload: StartVisitRequestDto = {
         startedAt: toZonedIsoString(now),
         location: toLocationDto(input.location),
@@ -171,11 +211,11 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
 
     return this.ctx.db().transaction((tx) => {
       const visit = this.loadOrThrow(tx, id);
-      visit.assertCanComplete(input.outcome);
-
       const customer = this.requireCustomer(tx, visit.customerId);
+      visit.assertCanComplete(input.outcome, customer.status === 'ACTIVE');
+
       const customerHasPhoto = Boolean(customer.storePhotoUrl || customer.storePhotoLocalUri);
-      if (visit.type === 'OPPORTUNITY' && !customerHasPhoto && !input.photoLocalUri) {
+      if (visit.needsStorePhoto(customerHasPhoto) && !input.photoLocalUri) {
         throw new VisitStorePhotoRequiredError();
       }
 

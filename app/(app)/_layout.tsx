@@ -14,7 +14,8 @@ export default function AppLayout() {
       <Stack.Screen name="visit/[id]" />
       <Stack.Screen name="visit/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="order/new" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="customer/[id]" />
+      <Stack.Screen name="customer/[id]/index" />
+      <Stack.Screen name="customer/[id]/billing" />
     </Stack>
   );
 }

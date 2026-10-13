@@ -40,6 +40,8 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
   adapters that implement the core ports. This is what screens read (offline-first, ADR 0003).
 - **API Client**: Configured Axios client with automatic Bearer token injection and 401 refresh interceptors.
 - **DTOs**: Raw API request/response structures matching NestJS backend.
+- **Device (`device/`)**: `expoLocationAdapter` (GPS, never throws: a failed reading is a
+  value) and `imagePickerCameraAdapter` (store photos), behind `ILocationPort` / `ICameraPort`.
 - **Storage Adapters**: 
   - `mmkvStorageAdapter`: High-performance synchronous key-value store for app state.
   - `secureStorageAdapter`: Keychain/Keystore encrypted storage for sensitive JWT tokens.
@@ -214,3 +216,17 @@ Más → Sincronización).
 
 Dates: `src/shared/utils/date` works in `America/Guayaquil`; the database stores UTC and
 payloads carry the local offset.
+
+## 8. Agenda and visit flow (ADR 0004)
+
+```text
+Agenda ──► useVisits(visible month) ──► calendar dots + day list + summary
+   └─ "Iniciar" ──► useCheckInVisit = GPS (ILocationPort) + useStartVisit
+visit/[id] ──► check-in ──► work by type (photo, outcome, order, notes; draft in MMKV)
+           └─► check-out = GPS + useCompleteVisit ──► "Agendar próxima visita" (visit/new)
+visit/new ──► type → customer (search | quick prospect) → date/time/seller/notes
+```
+
+The SQLite visit repository mirrors the API rules (one visit in progress per seller, ORDER /
+COLLECTION only for ACTIVE customers, SALE_CLOSED needs an ACTIVE customer, store photo on the
+first opportunity visit, first check-in pins the store location).

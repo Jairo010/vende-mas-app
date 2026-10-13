@@ -37,3 +37,32 @@ export class VisitStorePhotoRequiredError extends DomainError {
     super(message, 422, details);
   }
 }
+
+export class VisitAlreadyInProgressError extends DomainError {
+  public readonly code = 'VISIT_ALREADY_IN_PROGRESS';
+
+  constructor(activeVisitId: string) {
+    super('Ya tienes una visita en curso: finalízala antes de iniciar otra', 409, {
+      activeVisitId,
+    });
+  }
+}
+
+export class VisitCustomerNotInvoiceableError extends DomainError {
+  public readonly code = 'VISIT_CUSTOMER_NOT_INVOICEABLE';
+
+  constructor(
+    message = 'El cliente aún es prospecto: completa sus datos de facturación primero',
+    details?: unknown,
+  ) {
+    super(message, 422, details);
+  }
+}
+
+export class VisitParentNotFoundError extends DomainError {
+  public readonly code = 'VISIT_PARENT_NOT_FOUND';
+
+  constructor(message = 'La visita de origen no existe en este dispositivo', details?: unknown) {
+    super(message, 404, details);
+  }
+}

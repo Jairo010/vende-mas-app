@@ -1,6 +1,11 @@
-import { VisitInvalidTransitionError, VisitOutcomeNotAllowedError } from '../errors/visit.errors';
+import {
+  VisitCustomerNotInvoiceableError,
+  VisitInvalidTransitionError,
+  VisitOutcomeNotAllowedError,
+} from '../errors/visit.errors';
 import {
   OUTCOMES_BY_TYPE,
+  OUTCOMES_REQUIRING_ACTIVE_CUSTOMER,
   type LocalSyncStatus,
   type VisitCheckpoint,
   type VisitOutcome,
@@ -128,14 +133,33 @@ export class VisitEntity {
     return OUTCOMES_BY_TYPE[this.type];
   }
 
+  /** Only the assigned seller checks in and out (supervisors follow it up). */
+  public isAssignedTo(userId: string | null | undefined): boolean {
+    return Boolean(userId) && this.sellerId === userId;
+  }
+
+  /** Opportunity visits must leave the store with a photo when the customer has none. */
+  public needsStorePhoto(customerHasPhoto: boolean): boolean {
+    return this.type === 'OPPORTUNITY' && !customerHasPhoto;
+  }
+
+  /** The outcome needs an ACTIVE (invoiceable) customer, e.g. closing a sale. */
+  public static outcomeRequiresActiveCustomer(outcome: VisitOutcome): boolean {
+    return OUTCOMES_REQUIRING_ACTIVE_CUSTOMER.includes(outcome);
+  }
+
   public assertCanStart(): void {
     if (!this.canStart()) throw new VisitInvalidTransitionError(this.status, 'IN_PROGRESS');
   }
 
-  public assertCanComplete(outcome: VisitOutcome): void {
+  /** `customerIsActive` enables the "sale needs billing data" rule (omit to skip it). */
+  public assertCanComplete(outcome: VisitOutcome, customerIsActive?: boolean): void {
     if (!this.canComplete()) throw new VisitInvalidTransitionError(this.status, 'COMPLETED');
     if (!this.allowedOutcomes().includes(outcome)) {
       throw new VisitOutcomeNotAllowedError(this.type, outcome);
+    }
+    if (customerIsActive === false && VisitEntity.outcomeRequiresActiveCustomer(outcome)) {
+      throw new VisitCustomerNotInvoiceableError();
     }
   }
 

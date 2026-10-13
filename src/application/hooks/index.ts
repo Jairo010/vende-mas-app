@@ -5,3 +5,5 @@ export * from './visits';
 export * from './customers';
 export * from './catalog';
 export * from './orders';
+export * from './device';
+export * from './team';

@@ -23,4 +23,7 @@ export const API_ENDPOINTS = {
   files: {
     photos: '/api/v1/files/photos',
   },
+  users: {
+    list: '/api/v1/users',
+  },
 } as const;

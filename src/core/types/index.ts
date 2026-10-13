@@ -7,3 +7,5 @@ export * from './customer.types';
 export * from './catalog.types';
 export * from './order.types';
 export * from './sync.types';
+export * from './media.types';
+export * from './team.types';

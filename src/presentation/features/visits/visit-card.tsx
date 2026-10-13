@@ -1,7 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
-import { CloudUpload, MapPin } from 'lucide-react-native';
+import { CloudUpload, MapPin, Play } from 'lucide-react-native';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import { Badge } from '@/presentation/components/ui/badge';
+import { Button } from '@/presentation/components/ui/button';
+import { es } from '@/shared/i18n/es';
 import { formatTime } from '@/shared/utils/date';
 import { useThemeColors } from '@/theme';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from './visit-visuals';
@@ -9,10 +11,13 @@ import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from './visit-visuals';
 export interface VisitCardProps {
   visit: VisitEntity;
   onPress?: (visit: VisitEntity) => void;
+  /** Shows the "Iniciar" shortcut (check-in from the agenda). */
+  onStart?: (visit: VisitEntity) => void;
+  isStarting?: boolean;
 }
 
 /** Agenda row: time, type (color + icon), customer, status and pending-sync mark. */
-export function VisitCard({ visit, onPress }: VisitCardProps) {
+export function VisitCard({ visit, onPress, onStart, isStarting = false }: VisitCardProps) {
   const colors = useThemeColors();
   const type = VISIT_TYPE_VISUALS[visit.type];
   const status = VISIT_STATUS_VISUALS[visit.status];
@@ -56,6 +61,20 @@ export function VisitCard({ visit, onPress }: VisitCardProps) {
           ) : null}
         </View>
       </View>
+
+      {onStart ? (
+        <View className="ml-2 justify-center">
+          <Button
+            testID={`visit-card-start-${visit.id}`}
+            size="sm"
+            isLoading={isStarting}
+            leftIcon={<Play size={14} color={colors.primaryForeground} />}
+            onPress={() => onStart(visit)}
+          >
+            {es.agenda.start}
+          </Button>
+        </View>
+      ) : null}
     </Pressable>
   );
 }

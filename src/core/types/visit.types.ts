@@ -26,6 +26,12 @@ export const OUTCOMES_BY_TYPE: Readonly<Record<VisitType, readonly VisitOutcome[
   COLLECTION: ['COLLECTED', 'PARTIALLY_COLLECTED', 'NOT_COLLECTED'],
 };
 
+/** Only invoiceable (ACTIVE) customers can receive order or collection visits (API rule). */
+export const VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER: readonly VisitType[] = ['ORDER', 'COLLECTION'];
+
+/** Closing a sale needs billing data: the prospect must be promoted first (API rule). */
+export const OUTCOMES_REQUIRING_ACTIVE_CUSTOMER: readonly VisitOutcome[] = ['SALE_CLOSED'];
+
 /** Local replication state of an entity (see the outbox). */
 export type LocalSyncStatus = 'SYNCED' | 'PENDING' | 'REJECTED';
 

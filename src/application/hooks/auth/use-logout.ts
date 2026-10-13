@@ -7,6 +7,8 @@ import type { ISyncLocalStorePort } from '@/core/ports/sync.ports';
 import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositories/sqlite-sync-store.repository';
 import { syncCoordinator } from '@/application/sync/sync-coordinator';
 import { useSyncStore } from '@/stores/sync.store';
+import { useVisitDraftStore } from '@/stores/visit-draft.store';
+import { teamApiService } from '@/infrastructure/api/services/team-api.service';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
 import { useAuthStore } from '@/stores/auth.store';
@@ -49,6 +51,8 @@ export function useLogout(
         // The next sign-in downloads the working set again
       }
       useSyncStore.getState().reset();
+      useVisitDraftStore.getState().clearAll();
+      teamApiService.clearCache();
 
       clearSession();
       queryClient.clear();

@@ -6,3 +6,6 @@ export * from './customer.repository.port';
 export * from './catalog.repository.port';
 export * from './order.repository.port';
 export * from './sync.ports';
+export * from './location.port';
+export * from './camera.port';
+export * from './team.repository.port';

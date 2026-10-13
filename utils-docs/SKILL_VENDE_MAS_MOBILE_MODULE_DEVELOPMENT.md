@@ -26,7 +26,7 @@ When implementing any new module or feature:
   - `tsconfig.json`
   - `eslint.config.mjs`
   - `.prettierrc`
-  - `src/theme/colors.ts`, `src/theme/typography.ts`, `src/theme/spacing.ts`
+  - `src/theme/palette.ts` (the only place with color values), `src/theme/typography.ts`, `src/theme/spacing.ts`
   - `src/shared/providers/app-providers.tsx`
   - `app/_layout.tsx` (unless adding a global route provider or guard update)
 - **Reuse existing UI design system primitives** in `src/presentation/components/ui/` (`Button`, `Input`, `Card`, `Badge`, `BottomSheet`, `Toast`, `LoadingSpinner`, `EmptyState`, `ErrorBoundary`, etc.).
@@ -159,7 +159,7 @@ app/
 ## 4. Theming System & Styling Rules (NativeWind v4)
 
 ### 4.1 Semantic Design Tokens Only
-All styles MUST use NativeWind utility classes referencing the centralized semantic design tokens defined in `src/theme/colors.ts` and `global.css`:
+All styles MUST use NativeWind utility classes referencing the semantic design tokens whose values live only in `src/theme/palette.ts` (applied at runtime by `ThemeProvider`). For icons and native props use `useThemeColors()`:
 
 ```tsx
 // ✅ CORRECT — Semantic tokens adapting to Light and Dark modes

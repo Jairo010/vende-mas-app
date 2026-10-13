@@ -141,3 +141,51 @@ jest.mock('expo-image-picker', () => ({
   },
 }));
 
+
+// Mock expo-crypto (UUIDs for offline-created entities)
+jest.mock('expo-crypto', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  randomUUID: () => require('crypto').randomUUID(),
+}));
+
+// Mock NetInfo with the library's official mock
+jest.mock('@react-native-community/netinfo', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
+
+// expo-sqlite is native: repository tests use sql.js through __tests__/helpers/test-database
+jest.mock('expo-sqlite', () => ({
+  openDatabaseSync: jest.fn(() => {
+    throw new Error('expo-sqlite is not available in tests: use createTestDatabase()');
+  }),
+}));
+
+// Mock expo-file-system (photos copied for offline upload)
+jest.mock('expo-file-system', () => {
+  class MockFile {
+    uri: string;
+    exists = false;
+    constructor(...parts: unknown[]) {
+      this.uri = parts.map((part) => (typeof part === 'string' ? part : String((part as { uri?: string }).uri))).join('/');
+    }
+    copy = jest.fn().mockResolvedValue(undefined);
+    delete = jest.fn();
+  }
+  class MockDirectory extends MockFile {
+    create = jest.fn();
+  }
+  return { File: MockFile, Directory: MockDirectory, Paths: { document: 'file:///documents' } };
+});
+
+// Mock sonner-native (global toasts render in a native overlay)
+jest.mock('sonner-native', () => ({
+  Toaster: () => null,
+  toast: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn(), info: jest.fn() }),
+}));
+
+// Mock @gorhom/bottom-sheet with the library's official mock
+jest.mock('@gorhom/bottom-sheet', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('@gorhom/bottom-sheet/mock'),
+);

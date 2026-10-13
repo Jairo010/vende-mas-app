@@ -1,3 +1,5 @@
+> **Superseded (Phase 4, 2026-10-12):** the Tasks module and the drawer described here were replaced by Visits, bottom tabs and the offline-first data layer (see `docs/decisions/0003-mobile-offline-first-sqlite-outbox.md`). Kept as history.
+
 # Prompt Template — Vende Más Mobile Incremental Module Development
 
 Use this prompt for each new mobile module or feature implementation after the initial mobile architecture and project configuration have already been established.
@@ -17,7 +19,7 @@ Treat the project's existing mobile code, design system primitives, and conventi
 
 Do NOT rebuild or re-scaffold the mobile project.
 
-Do NOT change the base architecture, directory layout, or global configuration files (`global.css`, `tailwind.config.js`, `metro.config.js`, `theme/colors.ts`, `app-providers.tsx`) unless explicitly required and justified.
+Do NOT change the base architecture, directory layout, or global configuration files (`global.css`, `tailwind.config.js`, `metro.config.js`, `theme/palette.ts`, `app-providers.tsx`) unless explicitly required and justified.
 
 ---
 

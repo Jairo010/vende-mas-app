@@ -1,0 +1,232 @@
+import { and, asc, eq, like, or, type SQL } from 'drizzle-orm';
+import type { CustomerEntity } from '@/core/entities/customer.entity';
+import { CustomerAlreadyActiveError, CustomerNotFoundError } from '@/core/errors/customer.errors';
+import type { ICustomerRepositoryPort } from '@/core/ports/customer.repository.port';
+import type { ActorContext } from '@/core/ports/visit.repository.port';
+import type {
+  CreateCustomerInput,
+  CustomerFilter,
+  PromoteCustomerInput,
+  UpdateCustomerInput,
+} from '@/core/types/customer.types';
+import type { SyncAction } from '@/core/types/sync.types';
+import type {
+  CreateCustomerRequestDto,
+  PromoteCustomerRequestDto,
+  UpdateCustomerRequestDto,
+} from '@/infrastructure/api/dto/customer.dto';
+import { toZonedIsoString } from '@/shared/utils/date';
+import { CustomerRowMapper } from '../mappers/customer-row.mapper';
+import {
+  buildIdempotencyKey,
+  compactPayload,
+  enqueueOperation,
+  registerPendingPhoto,
+  type DbExecutor,
+} from '../outbox-writer';
+import { customers } from '../schema';
+import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
+
+const DEFAULT_SEARCH_LIMIT = 50;
+
+function clean(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export class SqliteCustomerRepository implements ICustomerRepositoryPort {
+  constructor(private readonly ctx: RepositoryContext = defaultRepositoryContext) {}
+
+  public async search(filter: CustomerFilter = {}): Promise<CustomerEntity[]> {
+    const conditions: SQL[] = [eq(customers.isActive, true)];
+    const term = clean(filter.search);
+    if (term) {
+      const pattern = `%${term}%`;
+      conditions.push(
+        or(
+          like(customers.tradeName, pattern),
+          like(customers.businessName, pattern),
+          like(customers.identification, pattern),
+        ) as SQL,
+      );
+    }
+    if (filter.status) conditions.push(eq(customers.status, filter.status));
+
+    return this.ctx
+      .db()
+      .select()
+      .from(customers)
+      .where(and(...conditions))
+      .orderBy(asc(customers.tradeName))
+      .limit(filter.limit ?? DEFAULT_SEARCH_LIMIT)
+      .all()
+      .map(CustomerRowMapper.toDomain);
+  }
+
+  public async findById(id: string): Promise<CustomerEntity | null> {
+    const row = this.ctx.db().select().from(customers).where(eq(customers.id, id)).get();
+    return row ? CustomerRowMapper.toDomain(row) : null;
+  }
+
+  public async create(input: CreateCustomerInput, actor: ActorContext): Promise<CustomerEntity> {
+    const id = this.ctx.newId();
+    const photoId = input.storePhotoLocalUri ? this.ctx.newId() : null;
+    const now = this.ctx.now();
+    const nowIso = now.toISOString();
+    const status = input.status ?? 'PROSPECT';
+
+    return this.ctx.db().transaction((tx) => {
+      tx.insert(customers)
+        .values({
+          id,
+          status,
+          tradeName: input.tradeName.trim(),
+          businessName: clean(input.businessName) ?? null,
+          identificationType: input.identificationType ?? null,
+          identification: clean(input.identification) ?? null,
+          contactName: clean(input.contactName) ?? null,
+          phone: clean(input.phone) ?? null,
+          email: clean(input.email) ?? null,
+          address: clean(input.address) ?? null,
+          addressReference: clean(input.addressReference) ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
+          storePhotoLocalUri: input.storePhotoLocalUri ?? null,
+          // Sellers are always assigned to themselves (server rule).
+          assignedSellerId: actor.userId,
+          createdById: actor.userId,
+          billingSyncStatus: status === 'ACTIVE' ? 'PENDING' : 'NOT_REQUIRED',
+          isActive: true,
+          syncStatus: 'PENDING',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        })
+        .run();
+
+      if (photoId && input.storePhotoLocalUri) {
+        registerPendingPhoto(tx, photoId, input.storePhotoLocalUri, nowIso);
+      }
+
+      const payload: CreateCustomerRequestDto = {
+        id,
+        status,
+        tradeName: input.tradeName.trim(),
+        businessName: clean(input.businessName),
+        identificationType: input.identificationType,
+        identification: clean(input.identification),
+        contactName: clean(input.contactName),
+        phone: clean(input.phone),
+        email: clean(input.email),
+        address: clean(input.address),
+        addressReference: clean(input.addressReference),
+        latitude: input.latitude,
+        longitude: input.longitude,
+      };
+      this.enqueue(tx, id, 'CREATE', compactPayload(payload), now, photoId);
+
+      return this.loadOrThrow(tx, id);
+    });
+  }
+
+  public async update(id: string, input: UpdateCustomerInput): Promise<CustomerEntity> {
+    const photoId = input.storePhotoLocalUri ? this.ctx.newId() : null;
+    const now = this.ctx.now();
+    const nowIso = now.toISOString();
+    const { storePhotoLocalUri, ...fields } = input;
+
+    return this.ctx.db().transaction((tx) => {
+      this.loadOrThrow(tx, id);
+
+      tx.update(customers)
+        .set({
+          ...compactPayload(fields),
+          ...(storePhotoLocalUri && { storePhotoLocalUri }),
+          syncStatus: 'PENDING',
+          updatedAt: nowIso,
+        })
+        .where(eq(customers.id, id))
+        .run();
+
+      if (photoId && storePhotoLocalUri) {
+        registerPendingPhoto(tx, photoId, storePhotoLocalUri, nowIso);
+      }
+
+      const payload: UpdateCustomerRequestDto = { ...fields };
+      this.enqueue(tx, id, 'UPDATE', compactPayload(payload), now, photoId);
+
+      return this.loadOrThrow(tx, id);
+    });
+  }
+
+  public async promote(id: string, input: PromoteCustomerInput): Promise<CustomerEntity> {
+    const now = this.ctx.now();
+    const nowIso = now.toISOString();
+
+    return this.ctx.db().transaction((tx) => {
+      const customer = this.loadOrThrow(tx, id);
+      if (!customer.isProspect()) throw new CustomerAlreadyActiveError();
+
+      const payload: PromoteCustomerRequestDto = {
+        businessName: input.businessName.trim(),
+        identificationType: input.identificationType,
+        identification: input.identification.trim(),
+        address: input.address.trim(),
+        email: input.email.trim(),
+        phone: clean(input.phone),
+        contactName: clean(input.contactName),
+      };
+
+      tx.update(customers)
+        .set({
+          status: 'ACTIVE',
+          businessName: payload.businessName,
+          identificationType: payload.identificationType,
+          identification: payload.identification,
+          address: payload.address,
+          email: payload.email,
+          ...(payload.phone && { phone: payload.phone }),
+          ...(payload.contactName && { contactName: payload.contactName }),
+          billingSyncStatus: 'PENDING',
+          syncStatus: 'PENDING',
+          updatedAt: nowIso,
+        })
+        .where(eq(customers.id, id))
+        .run();
+
+      this.enqueue(tx, id, 'PROMOTE', compactPayload(payload), now);
+
+      return this.loadOrThrow(tx, id);
+    });
+  }
+
+  private enqueue(
+    tx: DbExecutor,
+    customerId: string,
+    action: Extract<SyncAction, 'CREATE' | 'UPDATE' | 'PROMOTE'>,
+    payload: Record<string, unknown>,
+    now: Date,
+    photoId: string | null = null,
+  ): void {
+    enqueueOperation(
+      tx,
+      {
+        idempotencyKey: buildIdempotencyKey('CUSTOMER', action, customerId, this.ctx.newId()),
+        entityType: 'CUSTOMER',
+        entityId: customerId,
+        action,
+        payload,
+        clientTimestamp: toZonedIsoString(now),
+        ...(photoId && { photoId, photoField: 'storePhotoUrl' }),
+      },
+      now.toISOString(),
+    );
+  }
+
+  private loadOrThrow(db: DbExecutor, id: string): CustomerEntity {
+    const row = db.select().from(customers).where(eq(customers.id, id)).get();
+    if (!row) throw new CustomerNotFoundError();
+    return CustomerRowMapper.toDomain(row);
+  }
+}
+
+export const sqliteCustomerRepository = new SqliteCustomerRepository();

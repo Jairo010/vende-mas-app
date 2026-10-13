@@ -4,8 +4,7 @@ import { Calendar as CalendarIcon, Clock, ChevronDown } from 'lucide-react-nativ
 import * as Haptics from 'expo-haptics';
 import { DatePickerModal } from './date-picker-modal';
 import { TimePickerModal } from './time-picker-modal';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColors } from '@/theme';
 
 // Helper to format ISO date "YYYY-MM-DD" to human readable "17 de Sep, 2026"
 export function formatDisplayDate(isoDate?: string | null): string | null {
@@ -76,8 +75,7 @@ export function DatePickerField({
   testID = 'date-picker-field',
   className = '',
 }: DatePickerFieldProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
   const [isOpen, setIsOpen] = useState(false);
 
   const display = formatDisplayDate(value);
@@ -146,8 +144,7 @@ export function TimePickerField({
   testID = 'time-picker-field',
   className = '',
 }: TimePickerFieldProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
   const [isOpen, setIsOpen] = useState(false);
 
   const display = formatDisplayTime(value);

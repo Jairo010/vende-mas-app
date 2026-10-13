@@ -314,7 +314,7 @@ vende-mas-app/
 │   │   └── index.ts
 │   │
 │   └── theme/                        # 🔷 THEMING SYSTEM
-│       ├── colors.ts                 # Global color palette (light & dark tokens)
+│       ├── palette.ts                # THE single source of color values (light & dark tokens)
 │       ├── typography.ts             # Font families, sizes, weights
 │       ├── spacing.ts                # Spacing scale
 │       ├── shadows.ts                # Shadow definitions per platform
@@ -360,13 +360,16 @@ vende-mas-app/
 
 ### 4.1 Color Architecture
 
-All colors MUST be defined centrally in `src/theme/colors.ts` and exposed through CSS custom properties in `global.css` for NativeWind.
+All color VALUES live in ONE file: `src/theme/palette.ts` (HSL triplets for `light` and `dark`). Changing a color there updates the whole app. `global.css` holds no colors and `tailwind.config.js` only lists token names (`hsl(var(--token) / <alpha-value>)`).
 
 Colors are organized as **semantic design tokens**, NOT raw hex values scattered across components.
 
 ```text
-Raw Palette → Semantic Tokens → CSS Variables → NativeWind Classes → Components
+palette.ts → ThemeProvider (NativeWind vars() on the root view) → CSS variables → NativeWind classes
+           → useThemeColors() (resolved values for icons, StatusBar, navigation, sheets)
 ```
+
+A test (`__tests__/theme/palette.test.ts`) checks both schemes define the same tokens and that `tailwind.config.js` references exactly the palette tokens. See `docs/theming.md`.
 
 ### 4.2 Color Palette — Elegant & Professional
 
@@ -392,16 +395,17 @@ The app uses a refined, professional palette. Colors must look excellent in BOTH
 
 The app supports three modes: `light`, `dark`, and `system`.
 
-- Use `Appearance.setColorScheme()` for native-level theme switching.
+- The theme store keeps only the preference and applies it with NativeWind `colorScheme.set()`.
+- Read the effective scheme reactively with `useAppColorScheme()`; NEVER with `Appearance.getColorScheme()` (it does not re-render).
 - Persist user preference in MMKV via the Zustand theme store.
 - Prevent theme flicker on app launch by hydrating the store before initial render.
-- NativeWind `dark:` variant classes automatically adapt.
+- Prefer semantic classes over `dark:` variants: the variables already change per scheme.
 
 ### 4.4 Rules
 
-- NEVER hardcode hex/rgb values directly in components.
-- ALWAYS use NativeWind utility classes referencing semantic tokens (e.g., `bg-background`, `text-foreground`, `border-border`).
-- If a color is needed in JavaScript (e.g., for Reanimated), read it from the centralized theme module.
+- NEVER hardcode hex/rgb/hsl values in `app/` or `src/presentation/` (ESLint `no-restricted-syntax` fails the build).
+- ALWAYS use NativeWind utility classes referencing semantic tokens (e.g., `bg-background`, `text-foreground`, `border-border`, `bg-primary/10`).
+- If a color is needed in JavaScript (icons, Reanimated, native props), use `useThemeColors()` / `useThemeColorWithAlpha()` from `@/theme`.
 - Both light and dark palettes must be visually harmonious and pass accessibility contrast standards (WCAG AA minimum).
 
 ---
@@ -882,7 +886,7 @@ Do NOT introduce:
 
 - Redux, MobX, or other state managers alongside Zustand
 - GraphQL client if the API is REST
-- Offline-first database (Realm, WatermelonDB) unless specified
+- Another offline database or sync library: the app already is offline-first with expo-sqlite + Drizzle + outbox (ADR 0003)
 - Complex DI containers (the React Context + factory pattern is sufficient)
 - Microservice-like architecture within the mobile app
 - Generic abstractions with no current consumer

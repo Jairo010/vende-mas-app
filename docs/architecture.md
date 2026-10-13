@@ -13,7 +13,7 @@ Screens / UI Components  (Presentation / Driving Adapters)
         ↓
     Ports / Contracts  (Core Interfaces — Repository, Storage, Service)
         ↓
-Infrastructure Adapters  (Driven Adapters — MMKV, SecureStore, Axios API Client)
+Infrastructure Adapters  (Driven Adapters — SQLite repositories, MMKV, SecureStore, Axios)
 ```
 
 **Fundamental Rule:**
@@ -36,6 +36,8 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 - **Mappers**: Pure functions mapping external API DTOs into internal Domain Entities.
 
 ### 🔷 Infrastructure Layer (`src/infrastructure/`)
+- **Database (`database/`)**: Drizzle schema, versioned migrations and the `Sqlite*Repository`
+  adapters that implement the core ports. This is what screens read (offline-first, ADR 0003).
 - **API Client**: Configured Axios client with automatic Bearer token injection and 401 refresh interceptors.
 - **DTOs**: Raw API request/response structures matching NestJS backend.
 - **Storage Adapters**: 
@@ -75,16 +77,23 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 | **Secure Storage** | `expo-secure-store` | Hardware-backed encrypted token storage |
 | **Fast Storage** | `react-native-mmkv` | JSI synchronous key-value storage |
 | **Network** | `axios` | HTTP client with request/response interceptors |
+| **Local database** | `expo-sqlite` + `drizzle-orm` | Offline-first store with migrations (ADR 0003) |
+| **Connectivity** | `@react-native-community/netinfo` | Sync triggers and offline banner |
+| **Sheets / toasts** | `@gorhom/bottom-sheet`, `sonner-native` | Themed `BottomSheet` and global toasts |
+| **Calendar** | `react-native-calendars` | Agenda calendar (phase 5) |
 
 ---
 
 ## 4. State Management Strategy
 
-- **Server State**: Managed strictly via `@tanstack/react-query`. No API response data is copied into Zustand stores.
+- **Business data**: lives in the device database (SQLite). Hooks expose it through
+  `@tanstack/react-query`, whose queries read the repositories; the sync engine invalidates
+  them after applying server changes. Nothing business-related is copied into Zustand.
 - **Client State**: Lightweight stores in `src/stores/`:
   - `useAuthStore`: Authenticated user, session state, and hydration flags.
   - `useThemeStore`: Mode preference (`light`, `dark`, `system`) with MMKV persistence and native scheme sync.
   - `useAppStore`: General app flags (e.g. onboarding).
+  - `useSyncStore`: UI state of the sync (phase, online, pending / rejected counts, last sync).
 
 ---
 
@@ -160,76 +169,48 @@ HTTP 401 Unauthorized Response?
                                       - Redirect user to /(auth)/login
 ```
 
-### 6.3 Route Guards & Navigation Logic
+### 6.3 Route Guards & Navigation
 
-The root `AuthGuard` in `app/_layout.tsx` observes `isAuthenticated` and `isHydrated` from `useAuthStore`:
+The root layout (`app/_layout.tsx`) observes `isAuthenticated` and `isHydrated`:
 
-1. **Hydration Phase (`!isHydrated`)**: Blocks navigation rendering to prevent UI flicker until MMKV session data is restored.
-2. **Unauthenticated Redirect**: If `!isAuthenticated` and the user attempts to enter protected routes (`/(drawer)` or `/(tabs)`), immediately replaces route with `/(auth)/login`.
-3. **Authenticated Redirect**: If `isAuthenticated` and the user lands on `(auth)` screens, automatically redirects to `/(drawer)/tasks`.
+1. **Hydration**: renders nothing until auth and theme stores are restored from MMKV.
+2. **Unauthenticated**: any route outside `(auth)` is replaced with `/(auth)/login`.
+3. **Authenticated**: `(auth)` routes are replaced with `/(app)/(tabs)/agenda`.
+
+```text
+app/
+├── (auth)/login, forgot-password
+└── (app)/_layout.tsx            Stack + useSyncRunner (keeps the device in sync)
+    ├── (tabs)/_layout.tsx       Bottom tabs: Agenda · Clientes · Pedidos · Más
+    ├── visit/[id], visit/new    (visit flow — phase 5)
+    ├── customer/[id]
+    └── order/new                (offline order — phase 6)
+```
+
+Bottom tabs replaced the drawer: faster one-handed use in the field.
 
 ---
 
-## 7. Tasks & Commercial Agenda Module (`src/presentation/features/tasks/`)
-
-### 7.1 Central Task Lifecycle Engine & Data Flow
+## 7. Offline-first data flow (ADR 0003)
 
 ```text
-TasksScreen (app/(drawer)/tasks/index.tsx)
-    │
-    ├─► TasksCalendarStrip (horizontal 7-day strip, date picker, today indicator)
-    ├─► TasksFilterBar (search input, type pills: OPPORTUNITY/VISIT/SALE/COLLECTION, status chips)
-    ├─► TasksAgendaList (accelerated FlashList, pull-to-refresh, Floating Action Button)
-    ├─► TaskCard (type color border, status badge, GPS/photo badges, customer shortcut)
-    │
-    ├─► Step 1: TaskTypeSelectorSheet (4 interactive cards: OPPORTUNITY, VISIT, SALE, COLLECTION)
-    │       │
-    │       ▼
-    ├─► Step 2: Specialized Forms (src/presentation/features/tasks/forms/)
-    │       ├─► OpportunityFormSheet (GPS auto-capture, photo picker, deal value)
-    │       ├─► VisitFormSheet (scheduled dueDate, date/time pickers, customer)
-    │       ├─► SaleFormSheet (mandatory customer validation, product cart picker)
-    │       └─► CollectionFormSheet (mandatory customer, amount to collect)
-    │
-    ├─► TaskDetailSheet (full details, customer dialing/maps, GPS with Google Maps, photo modal)
-    │       ├─► TaskTransitionSheet (stage transition: OPPORTUNITY ➔ VISIT ➔ SALE ➔ COLLECTION)
-    │       ├─► TaskStatusActionSheet (status update: LOST with reasons, COLLECTED, COMPLETED)
-    │       └─► TaskHistoryTimeline (chronological audit logs with GPS and user author)
-    │
-    └─► Reusable Sub-Flows:
-            ├─► CustomerPickerModal (debounced search + "+ Registrar Nuevo Cliente")
-            ├─► QuickCreateCustomerSheet (on-the-spot customer creation with GPS)
-            └─► SaleProductCartSheet (product catalog browser + quantity stepper + 15% IVA total)
-            │
-            ▼
-    Application Hooks (useTasks, useCreateTask, useTransitionTask, useUpdateTaskStatus, useUploadTaskPhoto)
-            │
-            ▼
-    ITaskRepositoryPort (src/core/ports/task.repository.port.ts)
-            │
-            ▼
-    TaskApiService (src/infrastructure/api/services/task-api.service.ts)
-            │
-            ▼
-    Backend API (/api/v1/tasks)
+Screen ──► hook (React Query)
+             ├─ read  ──► I*RepositoryPort ──► Sqlite*Repository ──► SQLite
+             └─ write ──► useOfflineMutation ──► repository: local row + outbox (1 transaction)
+                                                   └─► SyncCoordinator.scheduleSync (debounced)
+
+SyncEngine (single-flight)
+  1. pending photos ──► POST /files/photos (client photoId)
+  2. outbox (in order, ≤100) ──► POST /sync/push ──► APPLIED/DUPLICATE: remove
+                                                   REJECTED: keep + show reason
+                                                   RETRY/SKIPPED: keep, stop
+  3. GET /sync/pull?cursor ──► SqliteSyncStoreRepository.applyPull (skips rows with pending changes)
+  4. invalidate React Query ──► screens re-read SQLite
 ```
 
-### 7.2 Drawer Navigation (`AppDrawer`)
+Triggers: app start, reconnection, foreground, every 5 minutes, after local changes and
+pull-to-refresh. State for the UI: `useSyncStatus()` (`SyncStatusPill`, `OfflineBanner`,
+Más → Sincronización).
 
-The application layout uses `expo-router/drawer` with a custom drawer component (`src/presentation/components/common/app-drawer.tsx`):
-- **User Profile Header**: Displays user initials avatar, full name, email, and role badge (`Asesor Comercial` / `Administrador`).
-- **Commercial Operations Section**:
-  - Agenda y Tareas (`/(drawer)/tasks`)
-  - Clientes (`/(drawer)/customers`)
-  - Ventas y Pedidos (`/(drawer)/sales`)
-  - Rutas de Visita (`/(drawer)/visits`)
-  - Oportunidades (`/(drawer)/opportunities`)
-  - Catálogo (`/(drawer)/catalog`)
-- **System Section**:
-  - Mi Perfil (`/(drawer)/profile`)
-  - Sincronización (`/(drawer)/sync`)
-  - Notificaciones (`/(drawer)/notifications`)
-- **Footer Controls**:
-  - Dark/Light Theme Switcher (`useThemeStore`)
-  - Logout with user confirmation dialog (`useLogout`)
-
+Dates: `src/shared/utils/date` works in `America/Guayaquil`; the database stores UTC and
+payloads carry the local offset.

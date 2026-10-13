@@ -118,7 +118,7 @@ export function Button({
       {isLoading ? (
         <LoadingSpinner
           size="small"
-          variant={variant === 'outline' || variant === 'ghost' ? 'foreground' : 'white'}
+          variant={variant === 'outline' || variant === 'ghost' ? 'foreground' : 'onPrimary'}
         />
       ) : (
         <>

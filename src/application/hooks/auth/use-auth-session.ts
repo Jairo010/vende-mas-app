@@ -7,6 +7,7 @@ export interface UseAuthSessionResult {
   isAuthenticated: boolean;
   isHydrated: boolean;
   isAdmin: boolean;
+  isSupervisor: boolean;
   isSeller: boolean;
 }
 
@@ -16,6 +17,7 @@ export function useAuthSession(): UseAuthSessionResult {
   const isHydrated = useAuthStore((state) => state.isHydrated);
 
   const isAdmin = user?.role === UserRole.ADMIN;
+  const isSupervisor = user?.role === UserRole.SUPERVISOR;
   const isSeller = user?.role === UserRole.SELLER;
 
   return {
@@ -23,6 +25,7 @@ export function useAuthSession(): UseAuthSessionResult {
     isAuthenticated,
     isHydrated,
     isAdmin,
+    isSupervisor,
     isSeller,
   };
 }

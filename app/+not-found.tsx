@@ -10,7 +10,7 @@ export default function NotFoundScreen() {
       <SafeAreaLayout>
         <View className="flex-1 items-center justify-center p-6">
           <Text className="text-xl font-bold text-foreground">{t('errors.notFound')}</Text>
-          <Link href={'/(drawer)/tasks' as never} className="mt-4">
+          <Link href="/(app)/(tabs)/agenda" className="mt-4">
             <Text className="text-primary font-medium">{t('common.back')}</Text>
           </Link>
         </View>

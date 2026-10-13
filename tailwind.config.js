@@ -1,3 +1,10 @@
+/**
+ * Colors are NOT defined here. Each class points to a CSS variable whose value lives in
+ * `src/theme/palette.ts` and is applied at runtime by `ThemeProvider` (NativeWind `vars()`).
+ * Only token names are listed; `__tests__/theme/palette.test.ts` checks they match the palette.
+ */
+const token = (name) => `hsl(var(--${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./app/**/*.{js,jsx,ts,tsx}', './src/**/*.{js,jsx,ts,tsx}'],
@@ -6,52 +13,37 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Light theme semantic tokens (CSS variable references)
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+        background: token('background'),
+        foreground: token('foreground'),
+        card: { DEFAULT: token('card'), foreground: token('card-foreground') },
+        popover: { DEFAULT: token('popover'), foreground: token('popover-foreground') },
+        primary: { DEFAULT: token('primary'), foreground: token('primary-foreground') },
+        secondary: { DEFAULT: token('secondary'), foreground: token('secondary-foreground') },
+        muted: { DEFAULT: token('muted'), foreground: token('muted-foreground') },
+        accent: { DEFAULT: token('accent'), foreground: token('accent-foreground') },
+        destructive: { DEFAULT: token('destructive'), foreground: token('destructive-foreground') },
+        success: { DEFAULT: token('success'), foreground: token('success-foreground') },
+        warning: { DEFAULT: token('warning'), foreground: token('warning-foreground') },
+        info: { DEFAULT: token('info'), foreground: token('info-foreground') },
+        border: token('border'),
+        input: token('input'),
+        ring: token('ring'),
+        overlay: token('overlay'),
+        visit: {
+          opportunity: token('visit-opportunity'),
+          order: token('visit-order'),
+          collection: token('visit-collection'),
         },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+        status: {
+          scheduled: token('status-scheduled'),
+          'in-progress': token('status-in-progress'),
+          completed: token('status-completed'),
+          cancelled: token('status-cancelled'),
         },
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        success: {
-          DEFAULT: 'hsl(var(--success))',
-          foreground: 'hsl(var(--success-foreground))',
-        },
-        warning: {
-          DEFAULT: 'hsl(var(--warning))',
-          foreground: 'hsl(var(--warning-foreground))',
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        heading: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter'],
+        heading: ['Inter'],
       },
     },
   },

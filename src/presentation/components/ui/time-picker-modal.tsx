@@ -3,8 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Clock, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Button } from './button';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColorWithAlpha, useThemeColors } from '@/theme';
 
 export interface TimePickerModalProps {
   visible: boolean;
@@ -33,8 +32,8 @@ export function TimePickerModal({
   onConfirm,
   onClose,
 }: TimePickerModalProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const primaryTintStrong = useThemeColorWithAlpha('primary', 0.18);
+  const activeColors = useThemeColors();
 
   const initialParsed = useMemo(() => {
     if (!initialTime) return { hour: 10, minute: '00', period: 'AM' as const };
@@ -116,13 +115,10 @@ export function TimePickerModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View className="flex-1 justify-end bg-black/60">
+      <View className="flex-1 justify-end bg-overlay/60">
         <Pressable className="flex-1" onPress={onClose} />
 
-        <View
-          className="rounded-t-3xl border-t border-border px-5 pt-4 pb-8 max-h-[85%]"
-          style={{ backgroundColor: scheme === 'dark' ? '#171717' : '#ffffff' }}
-        >
+        <View className="rounded-t-3xl border-t border-border bg-card px-5 pt-4 pb-8 max-h-[85%]">
           {/* Sheet Handle */}
           <View className="items-center mb-3">
             <View className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
@@ -167,11 +163,7 @@ export function TimePickerModal({
                       paddingHorizontal: 10,
                       paddingVertical: 6,
                       borderRadius: 8,
-                      backgroundColor: isSelected
-                        ? scheme === 'dark'
-                          ? 'rgba(229, 26, 26, 0.25)'
-                          : 'rgba(229, 26, 26, 0.12)'
-                        : activeColors.muted,
+                      backgroundColor: isSelected ? primaryTintStrong : activeColors.muted,
                       borderWidth: 1,
                       borderColor: isSelected ? activeColors.primary : activeColors.border,
                     }}
@@ -208,7 +200,7 @@ export function TimePickerModal({
                 >
                   <Text
                     className={`text-xs font-extrabold ${
-                      selectedPeriod === 'AM' ? 'text-white' : 'text-muted-foreground'
+                      selectedPeriod === 'AM' ? 'text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     AM
@@ -227,7 +219,7 @@ export function TimePickerModal({
                 >
                   <Text
                     className={`text-xs font-extrabold ${
-                      selectedPeriod === 'PM' ? 'text-white' : 'text-muted-foreground'
+                      selectedPeriod === 'PM' ? 'text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     PM
@@ -258,7 +250,7 @@ export function TimePickerModal({
                     >
                       <Text
                         className={`text-sm font-bold ${
-                          isSelected ? 'text-white' : 'text-foreground'
+                          isSelected ? 'text-primary-foreground' : 'text-foreground'
                         }`}
                       >
                         {h}
@@ -291,7 +283,7 @@ export function TimePickerModal({
                     >
                       <Text
                         className={`text-xs font-bold ${
-                          isSelected ? 'text-white' : 'text-foreground'
+                          isSelected ? 'text-primary-foreground' : 'text-foreground'
                         }`}
                       >
                         :{m}

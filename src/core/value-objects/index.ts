@@ -1,2 +1,2 @@
-// Domain value-objects barrel export
-export {};
+export * from './money';
+export * from './geo-distance';

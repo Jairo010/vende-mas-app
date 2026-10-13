@@ -1,3 +1,5 @@
 export * from './domain.error';
 export * from './auth.errors';
-export * from './task.errors';
+export * from './visit.errors';
+export * from './customer.errors';
+export * from './order.errors';

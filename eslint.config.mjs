@@ -46,6 +46,27 @@ export default tseslint.config(
     },
   },
   {
+    // Colors live only in src/theme/palette.ts: use classes (bg-primary) or useThemeColors().
+    files: ['app/**/*.{ts,tsx}', 'src/presentation/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b/]',
+          message: 'Hardcoded color: use a theme class or useThemeColors() (src/theme/palette.ts).',
+        },
+        {
+          selector: 'Literal[value=/\\b(?:rgba?|hsla?)\\(/]',
+          message: 'Hardcoded color: use a theme class or useThemeColors() (src/theme/palette.ts).',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6})\\b|\\b(?:rgba?|hsla?)\\(/]',
+          message: 'Hardcoded color: use a theme class or useThemeColors() (src/theme/palette.ts).',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: {

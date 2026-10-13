@@ -30,6 +30,9 @@ export class AuthMapper {
     if (normalized === 'ADMIN' || normalized === 'ADMINISTRATOR') {
       return UserRole.ADMIN;
     }
+    if (normalized === 'SUPERVISOR') {
+      return UserRole.SUPERVISOR;
+    }
 
     return UserRole.SELLER;
   }

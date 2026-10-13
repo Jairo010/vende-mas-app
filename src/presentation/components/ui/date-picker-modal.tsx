@@ -3,8 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Button } from './button';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColorWithAlpha, useThemeColors } from '@/theme';
 
 export interface DatePickerModalProps {
   visible: boolean;
@@ -47,8 +46,9 @@ export function DatePickerModal({
   onConfirm,
   onClose,
 }: DatePickerModalProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const primaryTintStrong = useThemeColorWithAlpha('primary', 0.18);
+  const primaryTintSoft = useThemeColorWithAlpha('primary', 0.1);
+  const activeColors = useThemeColors();
 
   const todayIso = useMemo(() => formatToIso(new Date()), []);
 
@@ -189,13 +189,10 @@ export function DatePickerModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View className="flex-1 justify-end bg-black/60">
+      <View className="flex-1 justify-end bg-overlay/60">
         <Pressable className="flex-1" onPress={onClose} />
 
-        <View
-          className="rounded-t-3xl border-t border-border px-5 pt-4 pb-8 max-h-[85%]"
-          style={{ backgroundColor: scheme === 'dark' ? '#171717' : '#ffffff' }}
-        >
+        <View className="rounded-t-3xl border-t border-border bg-card px-5 pt-4 pb-8 max-h-[85%]">
           {/* Sheet Handle */}
           <View className="items-center mb-3">
             <View className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
@@ -231,11 +228,7 @@ export function DatePickerModal({
                   paddingVertical: 6,
                   borderRadius: 8,
                   backgroundColor:
-                    selectedDate === todayIso
-                      ? scheme === 'dark'
-                        ? 'rgba(229, 26, 26, 0.25)'
-                        : 'rgba(229, 26, 26, 0.12)'
-                      : activeColors.muted,
+                    selectedDate === todayIso ? primaryTintStrong : activeColors.muted,
                   borderWidth: 1,
                   borderColor:
                     selectedDate === todayIso ? activeColors.primary : activeColors.border,
@@ -351,9 +344,7 @@ export function DatePickerModal({
                         backgroundColor: isSelected
                           ? activeColors.primary
                           : item.isToday
-                            ? scheme === 'dark'
-                              ? 'rgba(229, 26, 26, 0.15)'
-                              : 'rgba(229, 26, 26, 0.08)'
+                            ? primaryTintSoft
                             : 'transparent',
                         borderWidth: isSelected || item.isToday ? 1 : 0,
                         borderColor: isSelected ? activeColors.primary : activeColors.primary,
@@ -363,7 +354,7 @@ export function DatePickerModal({
                       <Text
                         className={`text-sm font-bold ${
                           isSelected
-                            ? 'text-white'
+                            ? 'text-primary-foreground'
                             : item.isToday
                               ? 'text-primary'
                               : 'text-foreground'

@@ -14,6 +14,22 @@ import type { ApiResponse } from '@/core/types/api.types';
 import type { RefreshTokenResponseDto } from '@/infrastructure/api/dto/auth.dto';
 import { useAuthStore } from '@/stores/auth.store';
 
+interface ApiErrorBody {
+  error?: { code?: string; message?: string; details?: unknown };
+  message?: string;
+  errors?: unknown;
+}
+
+/** Any other HTTP failure (5xx included), keeping the API error code when there is one. */
+export class HttpError extends DomainError {
+  public readonly code: string;
+
+  constructor(message: string, statusCode: number, apiCode?: string) {
+    super(message, statusCode);
+    this.code = apiCode ?? `HTTP_${statusCode}`;
+  }
+}
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;
@@ -51,7 +67,7 @@ export function setupInterceptors(instance: AxiosInstance): void {
   // Response Interceptor: Handle Token Refresh and Error Mapping
   instance.interceptors.response.use(
     (response) => response,
-    async (error: AxiosError<{ message?: string; statusCode?: number; errors?: unknown }>) => {
+    async (error: AxiosError<ApiErrorBody>) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
       // Check if network error
@@ -125,22 +141,21 @@ export function setupInterceptors(instance: AxiosInstance): void {
         }
       }
 
-      // Map other status codes to typed domain errors
-      const errorMessage = error.response.data?.message || error.message;
+      // Map other status codes to typed domain errors.
+      // The API error envelope is { success: false, error: { code, message, details } }.
+      const body = error.response.data;
+      const errorMessage = body?.error?.message || body?.message || error.message;
+      const details = body?.error?.details ?? body?.errors;
 
       if (status === 404) {
-        return Promise.reject(new NotFoundError(errorMessage));
+        return Promise.reject(new NotFoundError(errorMessage, details));
       }
 
       if (status === 422 || status === 400) {
-        return Promise.reject(new ValidationError(errorMessage, error.response.data?.errors));
+        return Promise.reject(new ValidationError(errorMessage, details));
       }
 
-      return Promise.reject(
-        new (class HttpError extends DomainError {
-          public readonly code = `HTTP_${status}`;
-        })(errorMessage, status, error.response.data),
-      );
+      return Promise.reject(new HttpError(errorMessage, status, body?.error?.code));
     },
   );
 }

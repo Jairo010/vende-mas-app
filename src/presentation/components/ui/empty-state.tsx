@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text, View, type ViewProps } from 'react-native';
 import { Inbox } from 'lucide-react-native';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
 import { Button } from './button';
+import { useThemeColors } from '@/theme';
 
 export interface EmptyStateProps extends ViewProps {
   icon?: ReactNode;
@@ -27,8 +26,7 @@ export function EmptyState({
   className = '',
   ...props
 }: EmptyStateProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
 
   return (
     <View className={`items-center justify-center px-6 py-12 ${className}`} {...props}>

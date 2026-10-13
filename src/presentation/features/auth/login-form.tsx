@@ -12,12 +12,11 @@ import { loginSchema, type LoginFormData } from '@/application/schemas/auth.sche
 import { mmkvStorageAdapter } from '@/infrastructure/storage/mmkv-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
 import { es } from '@/shared/i18n/es';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
 import { Input } from '@/presentation/components/ui/input';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
+import { useThemeColors } from '@/theme';
 
 export interface LoginFormProps {
   onSuccess?: () => void;
@@ -26,8 +25,7 @@ export interface LoginFormProps {
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
 
   const { loginAsync, isPending, error, reset: resetMutation } = useLogin();
 

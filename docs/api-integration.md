@@ -158,37 +158,27 @@ The mobile Axios client (`src/infrastructure/api/client/interceptors.ts`) handle
 
 ---
 
-## 3. Tasks & Commercial Agenda Module (`/api/v1/tasks`)
+## 3. Offline Sync (`/api/v1/sync`, `/api/v1/files`)
 
-### 3.1 Endpoints Overview
+Business data (visits, customers, orders, catalog, promotions) is **not** read or written
+with per-module REST calls. The app works on its local database and exchanges changes only
+through the sync protocol (contract: `vende-mas-api/docs/sync-protocol.md`, app side:
+`docs/decisions/0003-mobile-offline-first-sqlite-outbox.md`).
 
-| HTTP Method | Endpoint | Description | Auth Required | Request Payload | Response Data |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/tasks` | Create new operational task with GPS & photo | Yes (`Bearer`) | `CreateTaskRequestDto` | `TaskResponseDto` (201 Created) |
-| `POST` | `/api/v1/tasks/:id/transition` | Transition task type (`OPPORTUNITY` ➔ `VISIT` ➔ `SALE` ➔ `COLLECTION`) | Yes (`Bearer`) | `TransitionTaskRequestDto` | `TaskResponseDto` (200 OK) |
-| `PATCH` | `/api/v1/tasks/:id/status` | Update task status with GPS coordinates & notes | Yes (`Bearer`) | `UpdateTaskStatusRequestDto` | `TaskResponseDto` (200 OK) |
-| `POST` | `/api/v1/tasks/upload-photo` | Upload photo attachment (multipart/form-data) | Yes (`Bearer`) | FormData `file` (image) | `UploadTaskPhotoResponseDto` (201 Created) |
-| `GET` | `/api/v1/tasks` | List and filter agenda tasks | Yes (`Bearer`) | Query: `FindTasksQueryDto` | `PaginatedTasksResponseDto` |
-| `GET` | `/api/v1/tasks/:id` | Get task details by ID with audit timeline | Yes (`Bearer`) | Param: `id` | `TaskResponseDto` |
-| `PATCH` | `/api/v1/tasks/:id` | Update task details or coordinates | Yes (`Bearer`) | `UpdateTaskRequestDto` | `TaskResponseDto` |
-| `DELETE` | `/api/v1/tasks/:id` | Delete task from agenda | Yes (`Bearer`) | Param: `id` | 204 No Content |
+| Method | Endpoint | Used by | Request | Response (`data`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/sync/push` | `SyncApiService.push` | `{ operations: SyncPushOperationDto[] }` (1–100, in order) | `{ results[], summary }` |
+| `GET` | `/api/v1/sync/pull?cursor=` | `SyncApiService.pull` | optional `cursor` | `SyncPullResponseDto` (visits, customers, orders, products, categories, promotions, `cursor`, `hasMore`) |
+| `POST` | `/api/v1/files/photos` | `SyncApiService.uploadPhoto` | multipart `photo` + client `photoId` | `{ url, filename, mimeType, sizeBytes, alreadyExisted }` |
+| `GET` | `/api/v1/files/photos/:filename` | `usePhotoSource` (images) | Bearer header | image stream |
 
-### 3.2 Types & Statuses
-- **Operational Types (`TaskType`)**:
-  - `OPPORTUNITY`: Prospect identified in field (customer optional).
-  - `VISIT`: Scheduled meeting with date/time.
-  - `SALE`: Field sale and order (**Customer strictly required**).
-  - `COLLECTION`: Debt collection (**Customer strictly required**).
-- **Statuses (`TaskStatusType`)**:
-  - `PENDING`: Pendiente
-  - `IN_PROGRESS`: En Progreso
-  - `COMPLETED`: Completada
-  - `LOST`: Venta Perdida / No se concretó
-  - `COLLECTED`: Cobrada
-  - `CANCELLED`: Cancelada
+Push operations supported: `CUSTOMER` CREATE / UPDATE / PROMOTE, `VISIT` SCHEDULE / START /
+COMPLETE / RESCHEDULE / CANCEL, `ORDER` CREATE. Each `payload` is exactly the body of the
+matching REST endpoint; the DTOs mirrored by the app live in `src/infrastructure/api/dto/`.
 
-### 3.3 Scoping & Authorization Rules
-- **Sellers (`SELLER`)**: Scoped strictly to `userId: current_user.id`. Can only create, read, update, transition, and delete their own assigned tasks.
-- **Administrators (`ADMIN`)**: Can view all tasks, filter across sales representatives, or assign tasks to any active sales rep.
-- **Mandatory Customer Rule**: Transitioning to or creating a `SALE` or `COLLECTION` without a customer returns `400 Bad Request` (`TASK_CUSTOMER_REQUIRED`).
+### Error envelope
 
+Failed requests return `{ success: false, error: { code, message, details } }`. The Axios
+interceptor maps them to typed domain errors (`NotFoundError`, `ValidationError`,
+`HttpError` keeping the API `code`), and network failures to `NetworkError`, which the sync
+engine treats as "offline, retry later".

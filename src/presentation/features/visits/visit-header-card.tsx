@@ -14,6 +14,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card } from '@/presentation/components/ui/card';
 import { es } from '@/shared/i18n/es';
 import { formatDateTime } from '@/shared/utils/date';
+import { googleMapsPlaceUrl } from '@/shared/utils/maps-links';
 import { useThemeColors } from '@/theme';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from './visit-visuals';
 
@@ -60,9 +61,9 @@ export function VisitHeaderCard({ visit, showSeller = false }: VisitHeaderCardPr
   };
 
   const openMap = () => {
-    if (!hasLocation) return;
-    const query = `${customer.latitude},${customer.longitude}`;
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {});
+    if (customer?.latitude == null || customer.longitude == null) return;
+    const point = { latitude: customer.latitude, longitude: customer.longitude };
+    Linking.openURL(googleMapsPlaceUrl(point)).catch(() => {});
   };
 
   return (

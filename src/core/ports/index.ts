@@ -11,3 +11,4 @@ export * from './camera.port';
 export * from './team.repository.port';
 export * from './customer-lookup.port';
 export * from './collection.repository.port';
+export * from './route-optimizer.port';

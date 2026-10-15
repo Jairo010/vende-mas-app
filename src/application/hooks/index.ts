@@ -8,3 +8,4 @@ export * from './orders';
 export * from './device';
 export * from './team';
 export * from './collections';
+export * from './route';

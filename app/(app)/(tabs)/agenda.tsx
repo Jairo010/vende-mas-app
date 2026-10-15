@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CalendarDays, Plus } from 'lucide-react-native';
+import { CalendarDays, Plus, Route } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
+import { isPendingForRoute } from '@/application/route/route-plan';
 import { useSyncNow } from '@/application/hooks/sync/use-sync-now';
 import { useCheckInVisit } from '@/application/hooks/visits/use-check-in-visit';
 import { useVisitInProgress } from '@/application/hooks/visits/use-visit-in-progress';
@@ -11,6 +12,7 @@ import { useVisits } from '@/application/hooks/visits/use-visits';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import { VisitAlreadyInProgressError } from '@/core/errors/visit.errors';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
+import { Button } from '@/presentation/components/ui/button';
 import { OfflineBanner } from '@/presentation/components/feedback/offline-banner';
 import { SyncStatusPill } from '@/presentation/components/feedback/sync-status-pill';
 import { notify } from '@/presentation/components/feedback/toast';
@@ -74,6 +76,10 @@ export default function AgendaScreen() {
     [visits, selectedDate],
   );
   const summary = useMemo(() => summarizeDay(dayVisits), [dayVisits]);
+  // The optimal route covers today's own pending visits.
+  const hasRouteToday =
+    selectedDate === today &&
+    dayVisits.some((visit) => visit.isAssignedTo(user?.id) && isPendingForRoute(visit));
 
   const firstName = user?.name.split(' ')[0] ?? '';
 
@@ -150,7 +156,21 @@ export default function AgendaScreen() {
               data={dayVisits}
               keyExtractor={(visit) => visit.id}
               contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1, paddingBottom: 96 }}
-              ListHeaderComponent={<AgendaSummary summary={summary} />}
+              ListHeaderComponent={
+                <View className="gap-3">
+                  <AgendaSummary summary={summary} />
+                  {hasRouteToday ? (
+                    <Button
+                      testID="agenda-optimal-route"
+                      variant="outline"
+                      leftIcon={<Route size={16} color={colors.foreground} />}
+                      onPress={() => router.push('/(app)/route')}
+                    >
+                      {es.agenda.optimalRoute}
+                    </Button>
+                  ) : null}
+                </View>
+              }
               renderItem={({ item }) => (
                 <VisitCard
                   visit={item}

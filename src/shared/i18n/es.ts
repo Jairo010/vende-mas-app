@@ -112,6 +112,33 @@ export const es = {
     start: 'Iniciar',
     inProgressBanner: 'Visita en curso',
     resume: 'Continuar',
+    optimalRoute: 'Ver ruta óptima',
+  },
+  route: {
+    title: 'Ruta óptima',
+    computing: 'Calculando la mejor ruta...',
+    recompute: 'Recalcular',
+    navigateNext: 'Ir a la siguiente',
+    openFullRoute: 'Ruta en Google Maps',
+    fullRouteLimit: 'Google Maps abre las primeras 10 paradas.',
+    providers: {
+      GOOGLE: 'Con tráfico en tiempo real',
+      ESTIMATE: 'Ruta estimada',
+    },
+    estimateHint:
+      'El orden es aproximado (sin conexión o sin cálculo exacto disponible). Google Maps te guiará por las calles.',
+    total: 'Recorrido total',
+    stops: 'Paradas',
+    updatedAt: 'Actualizada a las',
+    next: 'Siguiente',
+    emptyTitle: 'No tienes visitas pendientes hoy',
+    emptyDescription:
+      'Cuando tengas visitas programadas para hoy, aquí verás el mejor orden para hacerlas.',
+    errorTitle: 'No se pudo calcular la ruta',
+    retry: 'Reintentar',
+    unlocatedTitle: 'Sin ubicación',
+    unlocatedDescription:
+      'Estos locales aún no tienen ubicación: quedará guardada en tu primera visita.',
   },
   calendar: {
     monthNames:

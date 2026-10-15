@@ -26,6 +26,7 @@ import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { CollectionPanel } from '@/presentation/features/collections/collection-panel';
 import { CustomerHistory } from '@/presentation/features/customers/customer-history';
 import { es } from '@/shared/i18n/es';
+import { googleMapsPlaceUrl } from '@/shared/utils/maps-links';
 import { useThemeColors } from '@/theme';
 
 const PHOTO_HEIGHT = 200;
@@ -88,8 +89,9 @@ export default function CustomerDetailScreen() {
   }
 
   const openMap = () => {
-    const query = `${customer.latitude},${customer.longitude}`;
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {});
+    if (customer.latitude === null || customer.longitude === null) return;
+    const point = { latitude: customer.latitude, longitude: customer.longitude };
+    Linking.openURL(googleMapsPlaceUrl(point)).catch(() => {});
   };
 
   return (

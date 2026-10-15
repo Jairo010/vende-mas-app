@@ -15,6 +15,25 @@ export function hslColor(triplet: string, alpha = 1): string {
     : `hsla(${hue}, ${saturation}, ${lightness}, ${alpha})`;
 }
 
+/** HSL triplet (`'0 84% 50%'`) → `#rrggbb`, for APIs that only take hex (Google map styles). */
+export function hexColor(triplet: string): string {
+  const [hue, saturation, lightness] = triplet
+    .trim()
+    .split(/\s+/)
+    .map((part) => parseFloat(part));
+  const l = lightness / 100;
+  const a = (saturation / 100) * Math.min(l, 1 - l);
+  // Standard HSL → RGB: f(n) = l − a·max(−1, min(k − 3, 9 − k, 1)), k = (n + h/30) mod 12.
+  const channel = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    const value = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(value * 255)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${channel(0)}${channel(8)}${channel(4)}`;
+}
+
 /** CSS variables (`--primary: 0 84% 50%`) for NativeWind `vars()`. */
 export function buildThemeVariables(scheme: ColorSchemeName): Record<string, string> {
   const tokens = palette[scheme];

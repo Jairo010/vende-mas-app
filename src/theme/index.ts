@@ -4,3 +4,4 @@ export * from './use-theme-colors';
 export * from './navigation-theme';
 export * from './typography';
 export * from './spacing';
+export * from './map-style';

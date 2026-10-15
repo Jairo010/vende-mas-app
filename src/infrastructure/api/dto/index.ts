@@ -7,3 +7,4 @@ export * from './order.dto';
 export * from './sync.dto';
 export * from './user.dto';
 export * from './collection.dto';
+export * from './route.dto';

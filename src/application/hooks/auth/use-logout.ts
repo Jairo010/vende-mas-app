@@ -9,6 +9,7 @@ import { syncCoordinator } from '@/application/sync/sync-coordinator';
 import { useSyncStore } from '@/stores/sync.store';
 import { useVisitDraftStore } from '@/stores/visit-draft.store';
 import { useOrderDraftStore } from '@/stores/order-draft.store';
+import { useRoutePlanStore } from '@/stores/route-plan.store';
 import { teamApiService } from '@/infrastructure/api/services/team-api.service';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
@@ -54,6 +55,7 @@ export function useLogout(
       useSyncStore.getState().reset();
       useVisitDraftStore.getState().clearAll();
       useOrderDraftStore.getState().clearAll();
+      useRoutePlanStore.getState().clearAll();
       teamApiService.clearCache();
 
       clearSession();

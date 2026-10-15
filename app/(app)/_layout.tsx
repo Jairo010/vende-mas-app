@@ -17,6 +17,7 @@ export default function AppLayout() {
       <Stack.Screen name="order/[id]" />
       <Stack.Screen name="customer/[id]/index" />
       <Stack.Screen name="customer/[id]/billing" />
+      <Stack.Screen name="route" />
       <Stack.Screen name="sync" />
       <Stack.Screen name="collections" />
       <Stack.Screen name="payment/new" options={{ presentation: 'modal' }} />

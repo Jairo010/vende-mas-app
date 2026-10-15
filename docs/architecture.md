@@ -24,6 +24,7 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 ## 2. Layer Responsibilities
 
 ### 🔷 Core Domain Layer (`src/core/`)
+
 - **Entities**: Pure business objects with no external framework dependencies.
 - **Value Objects**: Immutable domain primitives.
 - **Errors**: Base `DomainError` and typed subclasses (`UnauthorizedError`, `NotFoundError`, `ValidationError`, `NetworkError`).
@@ -31,22 +32,25 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 - **Types**: Shared types, pagination wrappers (`ApiResponse`, `PaginatedResponse`), domain enums (`UserRole`).
 
 ### 🔷 Application Layer (`src/application/`)
+
 - **Hooks**: Feature-scoped use-case orchestrators (e.g. `useLogin`, `useCustomers`).
 - **Schemas**: Zod validation schemas shared between forms and API payloads.
 - **Mappers**: Pure functions mapping external API DTOs into internal Domain Entities.
 
 ### 🔷 Infrastructure Layer (`src/infrastructure/`)
+
 - **Database (`database/`)**: Drizzle schema, versioned migrations and the `Sqlite*Repository`
   adapters that implement the core ports. This is what screens read (offline-first, ADR 0003).
 - **API Client**: Configured Axios client with automatic Bearer token injection and 401 refresh interceptors.
 - **DTOs**: Raw API request/response structures matching NestJS backend.
 - **Device (`device/`)**: `expoLocationAdapter` (GPS, never throws: a failed reading is a
   value) and `imagePickerCameraAdapter` (store photos), behind `ILocationPort` / `ICameraPort`.
-- **Storage Adapters**: 
+- **Storage Adapters**:
   - `mmkvStorageAdapter`: High-performance synchronous key-value store for app state.
   - `secureStorageAdapter`: Keychain/Keystore encrypted storage for sensitive JWT tokens.
 
 ### 🔷 Presentation Layer (`src/presentation/`)
+
 - **Layouts**: Layout wrappers (`SafeAreaLayout`) ensuring safe area insets and semantic background theming.
 - **Components**:
   - `ui/`: Design system primitives (styled with NativeWind).
@@ -55,6 +59,7 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 - **Features**: Feature-scoped UI fragments.
 
 ### 🔷 Navigation Layer (`app/`)
+
 - Expo Router file-system routing.
 - Thin screen files orchestrating UI components and calling application hooks.
 - Route guards (`AuthGuard`) protecting private tab routes from unauthenticated access.
@@ -63,26 +68,27 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 
 ## 3. Technology Stack
 
-| Category | Library | Purpose |
-| :--- | :--- | :--- |
-| **Framework** | `expo` (SDK 57) | Native managed workflow |
-| **Runtime** | React Native 0.86 / React 19 | UI engine with New Architecture |
-| **Language** | TypeScript (Strict mode) | Strict type safety, zero `any` |
-| **Navigation** | `expo-router` | File-system routing with route guards |
-| **Styling** | `nativewind` (v4) + `tailwindcss` | Semantic utility styling with CSS variables |
-| **Animations** | `react-native-reanimated` | Declarative 60/120fps animations |
-| **Gestures** | `react-native-gesture-handler` | Native touch system |
-| **Lists** | `@shopify/flash-list` | High performance recycling lists |
-| **Server State** | `@tanstack/react-query` (v5) | Cache, query deduplication, mutations |
-| **Client State** | `zustand` (v5) | Local state stores with MMKV persistence |
-| **Forms** | `react-hook-form` + `zod` | Declarative validation |
-| **Secure Storage** | `expo-secure-store` | Hardware-backed encrypted token storage |
-| **Fast Storage** | `react-native-mmkv` | JSI synchronous key-value storage |
-| **Network** | `axios` | HTTP client with request/response interceptors |
-| **Local database** | `expo-sqlite` + `drizzle-orm` | Offline-first store with migrations (ADR 0003) |
-| **Connectivity** | `@react-native-community/netinfo` | Sync triggers and offline banner |
-| **Sheets / toasts** | `@gorhom/bottom-sheet`, `sonner-native` | Themed `BottomSheet` and global toasts |
-| **Calendar** | `react-native-calendars` | Agenda calendar (phase 5) |
+| Category            | Library                                 | Purpose                                                               |
+| :------------------ | :-------------------------------------- | :-------------------------------------------------------------------- |
+| **Framework**       | `expo` (SDK 57)                         | Native managed workflow                                               |
+| **Runtime**         | React Native 0.86 / React 19            | UI engine with New Architecture                                       |
+| **Language**        | TypeScript (Strict mode)                | Strict type safety, zero `any`                                        |
+| **Navigation**      | `expo-router`                           | File-system routing with route guards                                 |
+| **Styling**         | `nativewind` (v4) + `tailwindcss`       | Semantic utility styling with CSS variables                           |
+| **Animations**      | `react-native-reanimated`               | Declarative 60/120fps animations                                      |
+| **Gestures**        | `react-native-gesture-handler`          | Native touch system                                                   |
+| **Lists**           | `@shopify/flash-list`                   | High performance recycling lists                                      |
+| **Server State**    | `@tanstack/react-query` (v5)            | Cache, query deduplication, mutations                                 |
+| **Client State**    | `zustand` (v5)                          | Local state stores with MMKV persistence                              |
+| **Forms**           | `react-hook-form` + `zod`               | Declarative validation                                                |
+| **Secure Storage**  | `expo-secure-store`                     | Hardware-backed encrypted token storage                               |
+| **Fast Storage**    | `react-native-mmkv`                     | JSI synchronous key-value storage                                     |
+| **Network**         | `axios`                                 | HTTP client with request/response interceptors                        |
+| **Local database**  | `expo-sqlite` + `drizzle-orm`           | Offline-first store with migrations (ADR 0003)                        |
+| **Connectivity**    | `@react-native-community/netinfo`       | Sync triggers and offline banner                                      |
+| **Sheets / toasts** | `@gorhom/bottom-sheet`, `sonner-native` | Themed `BottomSheet` and global toasts                                |
+| **Calendar**        | `react-native-calendars`                | Agenda calendar (phase 5)                                             |
+| **Maps**            | `react-native-maps`                     | Optimal route map: Google Maps (Android), Apple Maps (iOS) (ADR 0007) |
 
 ---
 
@@ -248,4 +254,16 @@ order review ──► payment plan (once / weekly) ──► local receivable (
 visit COLLECTION / customer ──► CollectionPanel ──► payment/new ──► useRegisterPayment
    SqliteCollectionRepository: oldest installment first, never above the balance, PAYMENT CREATE
 pull ──► receivables, payments, settings (credit rule) ──► order screen blocks overdue customers
+```
+
+## 11. Optimal route of the day (ADR 0007)
+
+```text
+agenda (today, own pending visits) ──► route screen ──► useRoutePlan
+   dayRouteStops: SCHEDULED / IN_PROGRESS of today with store coordinates (others: "sin ubicación")
+   RouteApiService ──► POST /routes/optimize (Google Routes behind the API cost guard)
+                  └─► offline / 404 / 5xx ──► solveOpenRoute + estimateRoute on the device
+   useRoutePlanStore (MMKV, per user and day) ──► reconcilePlan:
+       first stops done in order ──► trimmed (no API call) | added / cancelled / out of order ──► recompute
+RouteMap (react-native-maps) + RouteSummaryCard ──► Google Maps URLs (navigate to next / full route, ≤ 10 stops)
 ```

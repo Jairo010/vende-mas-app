@@ -29,4 +29,7 @@ export const API_ENDPOINTS = {
   customers: {
     lookup: '/api/v1/customers/lookup',
   },
+  routes: {
+    optimize: '/api/v1/routes/optimize',
+  },
 } as const;

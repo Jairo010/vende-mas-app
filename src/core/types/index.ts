@@ -10,3 +10,4 @@ export * from './sync.types';
 export * from './media.types';
 export * from './team.types';
 export * from './collection.types';
+export * from './route.types';

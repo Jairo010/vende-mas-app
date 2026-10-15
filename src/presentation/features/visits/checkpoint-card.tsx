@@ -19,14 +19,20 @@ export interface CheckpointCardProps {
   distanceToCustomerMeters?: number | null;
   /** Elapsed or total minutes, shown next to the time. */
   minutes?: number | null;
+  /** GPS quality and distance (admins and supervisors only). */
+  showLocation?: boolean;
 }
 
-/** When and where the seller arrived / left, with GPS quality and distance to the store. */
+/**
+ * When the seller arrived / left and, for admins and supervisors, where: GPS quality and
+ * distance to the store.
+ */
 export function CheckpointCard({
   kind,
   checkpoint,
   distanceToCustomerMeters,
   minutes,
+  showLocation = false,
 }: CheckpointCardProps) {
   const colors = useThemeColors();
   const Icon = kind === 'checkIn' ? LogIn : LogOut;
@@ -50,35 +56,39 @@ export function CheckpointCard({
         </View>
       </View>
 
-      <View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-2">
-        {checkpoint.location ? (
-          <View className="flex-row items-center">
-            <Satellite
-              size={14}
-              color={quality ? colors[LOCATION_QUALITY_TOKENS[quality]] : colors.mutedForeground}
-            />
-            <Text className="ml-1.5 text-sm text-foreground">
-              {es.visits.fields.accuracy}:{' '}
-              {accuracy !== undefined ? `±${Math.round(accuracy)} ${es.visits.meters}` : '—'}
-              {quality ? ` (${es.visits.gps.quality[quality]})` : ''}
-            </Text>
-          </View>
-        ) : (
-          <View className="flex-row items-center">
-            <MapPinOff size={14} color={colors.mutedForeground} />
-            <Text className="ml-1.5 text-sm text-muted-foreground">{es.visits.gps.noLocation}</Text>
-          </View>
-        )}
+      {showLocation ? (
+        <View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-2">
+          {checkpoint.location ? (
+            <View className="flex-row items-center">
+              <Satellite
+                size={14}
+                color={quality ? colors[LOCATION_QUALITY_TOKENS[quality]] : colors.mutedForeground}
+              />
+              <Text className="ml-1.5 text-sm text-foreground">
+                {es.visits.fields.accuracy}:{' '}
+                {accuracy !== undefined ? `±${Math.round(accuracy)} ${es.visits.meters}` : '—'}
+                {quality ? ` (${es.visits.gps.quality[quality]})` : ''}
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row items-center">
+              <MapPinOff size={14} color={colors.mutedForeground} />
+              <Text className="ml-1.5 text-sm text-muted-foreground">
+                {es.visits.gps.noLocation}
+              </Text>
+            </View>
+          )}
 
-        {distanceToCustomerMeters !== null && distanceToCustomerMeters !== undefined ? (
-          <View className="flex-row items-center">
-            <Ruler size={14} color={colors[distanceToken(distanceToCustomerMeters)]} />
-            <Text className="ml-1.5 text-sm text-foreground">
-              {es.visits.fields.distance}: {formatDistance(distanceToCustomerMeters)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
+          {distanceToCustomerMeters !== null && distanceToCustomerMeters !== undefined ? (
+            <View className="flex-row items-center">
+              <Ruler size={14} color={colors[distanceToken(distanceToCustomerMeters)]} />
+              <Text className="ml-1.5 text-sm text-foreground">
+                {es.visits.fields.distance}: {formatDistance(distanceToCustomerMeters)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </Card>
   );
 }

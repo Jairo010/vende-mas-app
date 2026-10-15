@@ -53,7 +53,7 @@ export default function AgendaScreen() {
   const colors = useThemeColors();
   const now = useNow(60_000);
   const today = todayKey(now);
-  const { user } = useAuthSession();
+  const { user, canSeeLocationTracking } = useAuthSession();
   const [selectedDate, setSelectedDate] = useState<DateKey>(today);
   const [startingId, setStartingId] = useState<string | null>(null);
 
@@ -95,7 +95,7 @@ export default function AgendaScreen() {
     setStartingId(visit.id);
     try {
       const { reading } = await checkIn(visit.id);
-      if (reading.ok) notify.success(es.visits.toasts.started);
+      if (reading.ok || !canSeeLocationTracking) notify.success(es.visits.toasts.started);
       else notify.warning(es.visits.toasts.started, es.visits.gps.failures[reading.reason]);
       openVisit(visit);
     } catch (error) {

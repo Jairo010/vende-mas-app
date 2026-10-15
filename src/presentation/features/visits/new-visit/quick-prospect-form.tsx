@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleCheck, Crosshair } from 'lucide-react-native';
+import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useCurrentLocation } from '@/application/hooks/device/use-current-location';
 import {
   quickProspectSchema,
@@ -36,6 +37,7 @@ export function QuickProspectForm({ initialValue, onSubmit, onCancel }: QuickPro
   const f = es.newVisit.prospectFields;
   const [location, setLocation] = useState<GeoPoint | null>(initialValue?.location ?? null);
   const { capture, isCapturing } = useCurrentLocation();
+  const { canSeeLocationTracking } = useAuthSession();
 
   const {
     control,
@@ -128,21 +130,23 @@ export function QuickProspectForm({ initialValue, onSubmit, onCancel }: QuickPro
         )}
       />
 
-      <Button
-        testID="prospect-capture-location"
-        variant="outline"
-        isLoading={isCapturing}
-        leftIcon={
-          location ? (
-            <CircleCheck size={16} color={colors.success} />
-          ) : (
-            <Crosshair size={16} color={colors.foreground} />
-          )
-        }
-        onPress={() => void captureLocation()}
-      >
-        {location ? es.newVisit.locationSaved : es.newVisit.captureLocation}
-      </Button>
+      {canSeeLocationTracking ? (
+        <Button
+          testID="prospect-capture-location"
+          variant="outline"
+          isLoading={isCapturing}
+          leftIcon={
+            location ? (
+              <CircleCheck size={16} color={colors.success} />
+            ) : (
+              <Crosshair size={16} color={colors.foreground} />
+            )
+          }
+          onPress={() => void captureLocation()}
+        >
+          {location ? es.newVisit.locationSaved : es.newVisit.captureLocation}
+        </Button>
+      ) : null}
 
       <View className="flex-row gap-2">
         <Button variant="ghost" className="flex-1" onPress={onCancel}>

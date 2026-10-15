@@ -273,7 +273,7 @@ export const es = {
     noCustomers: 'No hay clientes que coincidan.',
     newProspect: 'Nuevo prospecto',
     newProspectDescription:
-      'Si el dueño no quiere dar datos, escribe solo una referencia del local. Guardamos tu ubicación.',
+      'Si el dueño no quiere dar datos, escribe solo una referencia del local.',
     prospectFields: {
       tradeName: 'Nombre del local o referencia',
       tradeNamePlaceholder: 'Ej.: Lubricadora El Pana / Taller esquina azul',

@@ -62,7 +62,7 @@ export default function VisitScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const now = useNow();
-  const { user, isAdmin, isSupervisor } = useAuthSession();
+  const { user, isAdmin, isSupervisor, canSeeLocationTracking } = useAuthSession();
 
   const { visit, isLoading } = useVisit(id);
   const { customer } = useCustomer(visit?.customerId);
@@ -166,7 +166,7 @@ export default function VisitScreen() {
     }
     try {
       const { reading } = await checkIn(visit.id);
-      if (reading.ok) notify.success(es.visits.toasts.started);
+      if (reading.ok || !canSeeLocationTracking) notify.success(es.visits.toasts.started);
       else notify.warning(es.visits.toasts.started, es.visits.gps.failures[reading.reason]);
     } catch (error) {
       notify.error(error);
@@ -188,8 +188,9 @@ export default function VisitScreen() {
       });
       clearDraft(visit.id);
       setShowErrors(false);
-      if (reading.ok) notify.success(es.visits.toasts.completed, es.visits.toasts.queued);
-      else notify.warning(es.visits.toasts.completed, es.visits.gps.failures[reading.reason]);
+      if (reading.ok || !canSeeLocationTracking) {
+        notify.success(es.visits.toasts.completed, es.visits.toasts.queued);
+      } else notify.warning(es.visits.toasts.completed, es.visits.gps.failures[reading.reason]);
     } catch (error) {
       notify.error(error);
     }
@@ -239,7 +240,9 @@ export default function VisitScreen() {
           leftIcon={<LogIn size={18} color={colors.primaryForeground} />}
           onPress={() => void start()}
         >
-          {isLocatingIn ? es.visits.gps.capturing : es.visits.actions.start}
+          {isLocatingIn && canSeeLocationTracking
+            ? es.visits.gps.capturing
+            : es.visits.actions.start}
         </Button>
       );
     }
@@ -252,7 +255,9 @@ export default function VisitScreen() {
           leftIcon={<LogOut size={18} color={colors.primaryForeground} />}
           onPress={() => void finish()}
         >
-          {isLocatingOut ? es.visits.gps.capturing : es.visits.actions.finish}
+          {isLocatingOut && canSeeLocationTracking
+            ? es.visits.gps.capturing
+            : es.visits.actions.finish}
         </Button>
       );
     }
@@ -300,6 +305,7 @@ export default function VisitScreen() {
               checkpoint={visit.start}
               distanceToCustomerMeters={visit.distanceToCustomerMeters}
               minutes={visit.status === 'IN_PROGRESS' ? visit.elapsedMinutes(now) : null}
+              showLocation={canSeeLocationTracking}
             />
           ) : null}
 
@@ -328,6 +334,7 @@ export default function VisitScreen() {
               kind="checkOut"
               checkpoint={visit.end}
               minutes={visit.durationMinutes}
+              showLocation={canSeeLocationTracking}
             />
           ) : null}
 

@@ -9,6 +9,12 @@ export interface UseAuthSessionResult {
   isAdmin: boolean;
   isSupervisor: boolean;
   isSeller: boolean;
+  /**
+   * GPS tracking details (accuracy, distance to the store, missing fixes) are a control for
+   * admins and supervisors: sellers only see the OS permission prompt. Locations are always
+   * captured, whatever the role.
+   */
+  canSeeLocationTracking: boolean;
 }
 
 export function useAuthSession(): UseAuthSessionResult {
@@ -27,5 +33,6 @@ export function useAuthSession(): UseAuthSessionResult {
     isAdmin,
     isSupervisor,
     isSeller,
+    canSeeLocationTracking: isAdmin || isSupervisor,
   };
 }

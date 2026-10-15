@@ -264,7 +264,11 @@ export const es = {
       ORDER: 'Tomar un pedido a un cliente activo.',
       COLLECTION: 'Cobrar facturas pendientes a un cliente activo.',
     },
-    onlyActiveHint: 'Las visitas de pedido y cobro son solo para clientes activos.',
+    onlyActiveHint:
+      'Las visitas de pedido y cobro son para clientes activos. Si eliges un prospecto, podrás activarlo con sus datos de facturación.',
+    prospectNeedsBilling:
+      'Este prospecto aún no está activo. Completa sus datos de facturación para agendarle un pedido o cobro.',
+    activateProspect: 'Activar cliente',
     searchPlaceholder: 'Buscar cliente o prospecto...',
     noCustomers: 'No hay clientes que coincidan.',
     newProspect: 'Nuevo prospecto',

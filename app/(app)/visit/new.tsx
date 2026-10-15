@@ -13,6 +13,7 @@ import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import {
   CustomerStep,
   isSelectionAllowed,
+  needsActivation,
   type CustomerSelection,
 } from '@/presentation/features/visits/new-visit/customer-step';
 import { ScheduleStep } from '@/presentation/features/visits/new-visit/schedule-step';
@@ -89,10 +90,15 @@ export default function NewVisitScreen() {
 
   const changeType = (next: VisitType) => {
     setType(next);
-    // Orders and collections only for ACTIVE customers: drop a selection that no longer fits
-    // (a follow-up keeps its customer; the step explains why it cannot continue).
+    // Orders and collections only for ACTIVE customers: drop a selection that no longer fits,
+    // except a saved prospect, which the step offers to activate (a follow-up keeps its
+    // customer; the step explains why it cannot continue).
     if (!isFollowUp) {
-      setSelection((current) => (isSelectionAllowed(next, current) ? current : null));
+      setSelection((current) =>
+        current && (isSelectionAllowed(next, current) || needsActivation(next, current))
+          ? current
+          : null,
+      );
     }
   };
 

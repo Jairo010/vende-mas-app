@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Search, UserPlus } from 'lucide-react-native';
+import { FileText, Search, UserPlus } from 'lucide-react-native';
 import { useCustomers } from '@/application/hooks/customers/use-customers';
+import { usePromoteCustomer } from '@/application/hooks/customers/use-promote-customer';
+import type { PromoteCustomerFormData } from '@/application/schemas/customer.schema';
 import type { CustomerEntity } from '@/core/entities/customer.entity';
 import { VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER, type VisitType } from '@/core/types/visit.types';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
@@ -15,6 +17,7 @@ import {
   CustomerLookupCard,
   looksLikeIdentification,
 } from '@/presentation/features/customers/customer-lookup-card';
+import { BillingDataForm } from '@/presentation/features/customers/billing-data-form';
 import { CustomerListItem } from '@/presentation/features/customers/customer-list-item';
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value';
 import { es } from '@/shared/i18n/es';
@@ -99,7 +102,20 @@ function SelectedCustomer({
   );
 }
 
-/** Step 2: search a customer or prospect, or create a prospect on the spot. */
+/** Whether the selection is a prospect that must be activated before an order / collection. */
+export function needsActivation(type: VisitType, selection: CustomerSelection): boolean {
+  return (
+    VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER.includes(type) &&
+    selection.kind === 'existing' &&
+    selection.customer.isProspect()
+  );
+}
+
+/**
+ * Step 2: search a customer or prospect, or create a prospect on the spot. Orders and
+ * collections need an ACTIVE customer: a prospect who now wants to buy can be activated here
+ * with its billing data (same PROMOTE as the customer screen, offline-ready).
+ */
 export function CustomerStep({
   visitType,
   selection,
@@ -110,18 +126,61 @@ export function CustomerStep({
   const [search, setSearch] = useState('');
   const [creatingProspect, setCreatingProspect] = useState(false);
   const [prospectDraft, setProspectDraft] = useState<QuickProspect | null>(null);
+  const [activating, setActivating] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const onlyActive = VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER.includes(visitType);
-  const { customers, isLoading } = useCustomers({
-    search: debouncedSearch,
-    status: onlyActive ? 'ACTIVE' : undefined,
-    limit: SEARCH_LIMIT,
-  });
+  // Prospects are listed too (marked with their badge): they can be activated once picked.
+  const { customers, isLoading } = useCustomers({ search: debouncedSearch, limit: SEARCH_LIMIT });
+  const { promoteCustomer, isPending: isPromoting } = usePromoteCustomer();
+
+  const activate = async (customer: CustomerEntity, data: PromoteCustomerFormData) => {
+    try {
+      const result = await promoteCustomer({ id: customer.id, ...data });
+      if (result.id !== customer.id) {
+        // The RUC was a registered customer: the prospect was merged into it.
+        notify.success(es.customers.billing.mergedInto, result.tradeName);
+      } else {
+        notify.success(es.customers.billing.promoted, es.visits.toasts.queued);
+      }
+      setActivating(false);
+      onChange({ kind: 'existing', customer: result });
+    } catch (error) {
+      notify.error(error);
+    }
+  };
 
   if (selection) {
+    const mustActivate = needsActivation(visitType, selection);
+
+    if (mustActivate && activating && selection.kind === 'existing') {
+      return (
+        <View className="gap-4">
+          <SelectedCustomer selection={selection} />
+          <Text className="text-sm leading-5 text-muted-foreground">
+            {es.customers.billing.description}
+          </Text>
+          <BillingDataForm
+            customer={selection.customer}
+            onSubmit={(data) => activate(selection.customer, data)}
+            isSubmitting={isPromoting}
+          />
+          <Button
+            testID="new-visit-cancel-activation"
+            variant="ghost"
+            disabled={isPromoting}
+            onPress={() => setActivating(false)}
+          >
+            {es.common.cancel}
+          </Button>
+        </View>
+      );
+    }
+
     return (
       <View className="gap-3">
-        {locked && !isSelectionAllowed(visitType, selection) ? (
+        {mustActivate ? (
+          <AlertBanner variant="warning" message={es.newVisit.prospectNeedsBilling} />
+        ) : locked && !isSelectionAllowed(visitType, selection) ? (
           <AlertBanner variant="warning" message={es.newVisit.onlyActiveHint} />
         ) : null}
         <SelectedCustomer
@@ -135,10 +194,20 @@ export function CustomerStep({
                     setProspectDraft(selection.prospect);
                     setCreatingProspect(true);
                   }
+                  setActivating(false);
                   onChange(null);
                 }
           }
         />
+        {mustActivate ? (
+          <Button
+            testID="new-visit-activate-prospect"
+            leftIcon={<FileText size={16} color={colors.primaryForeground} />}
+            onPress={() => setActivating(true)}
+          >
+            {es.newVisit.activateProspect}
+          </Button>
+        ) : null}
       </View>
     );
   }
@@ -185,11 +254,7 @@ export function CustomerStep({
       {customers.length === 0 && !isLoading && looksLikeIdentification(debouncedSearch) ? (
         <CustomerLookupCard
           identification={debouncedSearch}
-          onFound={(customer) => {
-            const selection: CustomerSelection = { kind: 'existing', customer };
-            if (isSelectionAllowed(visitType, selection)) onChange(selection);
-            else notify.warning(es.newVisit.onlyActiveHint);
-          }}
+          onFound={(customer) => onChange({ kind: 'existing', customer })}
         />
       ) : null}
 

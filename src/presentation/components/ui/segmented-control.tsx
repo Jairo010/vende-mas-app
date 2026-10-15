@@ -37,8 +37,10 @@ export function SegmentedControl<T extends string>({
               Haptics.selectionAsync().catch(() => {});
               onChange(option.value);
             }}
+            // Both branches need a shadow-* class: shadows set CSS variables and NativeWind
+            // cannot add variables after the first render (it remounts and crashes in dev).
             className={`flex-1 items-center justify-center rounded-lg py-2 ${
-              selected ? 'bg-card shadow-sm' : ''
+              selected ? 'bg-card shadow-sm' : 'shadow-none'
             }`}
           >
             <Text

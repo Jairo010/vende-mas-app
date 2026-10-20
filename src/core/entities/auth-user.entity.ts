@@ -26,6 +26,10 @@ export class AuthUserEntity implements AuthUser {
     return this.role === UserRole.ADMIN;
   }
 
+  public isSupervisor(): boolean {
+    return this.role === UserRole.SUPERVISOR;
+  }
+
   public isSeller(): boolean {
     return this.role === UserRole.SELLER;
   }

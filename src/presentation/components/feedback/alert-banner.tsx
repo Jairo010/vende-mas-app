@@ -1,8 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react-native';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColors, type ThemeToken } from '@/theme';
 
 export type AlertVariant = 'error' | 'success' | 'warning' | 'info';
 
@@ -15,6 +14,36 @@ export interface AlertBannerProps {
   className?: string;
 }
 
+const VARIANTS: Record<
+  AlertVariant,
+  { container: string; title: string; token: ThemeToken; Icon: typeof Info }
+> = {
+  success: {
+    container: 'bg-success/10 border-success/30',
+    title: 'text-success',
+    token: 'success',
+    Icon: CheckCircle2,
+  },
+  warning: {
+    container: 'bg-warning/10 border-warning/30',
+    title: 'text-warning',
+    token: 'warning',
+    Icon: AlertTriangle,
+  },
+  info: {
+    container: 'bg-info/10 border-info/30',
+    title: 'text-info',
+    token: 'info',
+    Icon: Info,
+  },
+  error: {
+    container: 'bg-destructive/10 border-destructive/30',
+    title: 'text-destructive',
+    token: 'destructive',
+    Icon: AlertCircle,
+  },
+};
+
 export function AlertBanner({
   variant = 'error',
   title,
@@ -23,59 +52,22 @@ export function AlertBanner({
   dismissible = false,
   className = '',
 }: AlertBannerProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
-
-  const getVariantStyles = () => {
-    switch (variant) {
-      case 'success':
-        return {
-          bgColor: scheme === 'dark' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
-          borderColor: scheme === 'dark' ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.3)',
-          textColor: activeColors.success,
-          icon: <CheckCircle2 size={20} color={activeColors.success} />,
-        };
-      case 'warning':
-        return {
-          bgColor: scheme === 'dark' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(234, 179, 8, 0.1)',
-          borderColor: scheme === 'dark' ? 'rgba(234, 179, 8, 0.35)' : 'rgba(234, 179, 8, 0.3)',
-          textColor: activeColors.warning,
-          icon: <AlertTriangle size={20} color={activeColors.warning} />,
-        };
-      case 'info':
-        return {
-          bgColor: scheme === 'dark' ? 'rgba(240, 62, 62, 0.12)' : 'rgba(229, 26, 26, 0.08)',
-          borderColor: scheme === 'dark' ? 'rgba(240, 62, 62, 0.3)' : 'rgba(229, 26, 26, 0.25)',
-          textColor: activeColors.primary,
-          icon: <Info size={20} color={activeColors.primary} />,
-        };
-      case 'error':
-      default:
-        return {
-          bgColor: scheme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-          borderColor: scheme === 'dark' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.3)',
-          textColor: activeColors.destructive,
-          icon: <AlertCircle size={20} color={activeColors.destructive} />,
-        };
-    }
-  };
-
-  const { bgColor, borderColor, textColor, icon } = getVariantStyles();
+  const colors = useThemeColors();
+  const { container, title: titleClass, token, Icon } = VARIANTS[variant];
 
   return (
     <Animated.View
       entering={FadeInDown.duration(250)}
       exiting={FadeOutUp.duration(200)}
-      className={`w-full flex-row items-start rounded-xl border p-3.5 ${className}`}
-      style={{ backgroundColor: bgColor, borderColor: borderColor }}
+      className={`w-full flex-row items-start rounded-xl border p-3.5 ${container} ${className}`}
     >
-      <View className="mr-3 mt-0.5">{icon}</View>
+      <View className="mr-3 mt-0.5">
+        <Icon size={20} color={colors[token]} />
+      </View>
 
       <View className="flex-1 pr-1">
         {title ? (
-          <Text className="font-semibold text-sm mb-0.5" style={{ color: textColor }}>
-            {title}
-          </Text>
+          <Text className={`font-semibold text-sm mb-0.5 ${titleClass}`}>{title}</Text>
         ) : null}
         <Text className="text-xs leading-5 text-foreground font-normal">{message}</Text>
       </View>
@@ -86,7 +78,7 @@ export function AlertBanner({
           onPress={onDismiss}
           className="ml-2 mt-0.5 p-1 rounded-full"
         >
-          <X size={14} color={activeColors.mutedForeground} />
+          <X size={14} color={colors.mutedForeground} />
         </Pressable>
       ) : null}
     </Animated.View>

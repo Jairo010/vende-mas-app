@@ -4,13 +4,12 @@ import { ArrowLeft, KeyRound } from 'lucide-react-native';
 import { AuthLayout } from '@/presentation/layouts/auth-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { es } from '@/shared/i18n/es';
+import { useThemeColors } from '@/theme';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
 
   return (
     <AuthLayout>
@@ -19,17 +18,16 @@ export default function ForgotPasswordScreen() {
           <KeyRound size={32} color={activeColors.primary} strokeWidth={2.5} />
         </View>
         <Text className="text-2xl font-bold tracking-tight text-foreground text-center">
-          Recuperar Contraseña
+          {es.auth.recovery.title}
         </Text>
         <Text className="mt-2 text-center text-sm text-muted-foreground max-w-xs leading-5">
-          Comunícate con el administrador del sistema para restablecer tus credenciales de acceso.
+          {es.auth.recovery.subtitle}
         </Text>
       </View>
 
       <Card className="rounded-3xl border border-border bg-card p-6 shadow-md items-center">
         <Text className="text-sm text-center text-muted-foreground mb-6 leading-5">
-          Por motivos de seguridad institucional, el restablecimiento de contraseñas para vendedores
-          y administradores se gestiona de forma centralizada.
+          {es.auth.recovery.body}
         </Text>
 
         <Button
@@ -38,7 +36,7 @@ export default function ForgotPasswordScreen() {
           onPress={() => router.back()}
           className="w-full"
         >
-          Volver a Iniciar Sesión
+          {es.auth.recovery.back}
         </Button>
       </Card>
     </AuthLayout>

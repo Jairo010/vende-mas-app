@@ -3,12 +3,27 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { authApiService } from '@/infrastructure/api/services/auth-api.service';
 import type { IAuthRepositoryPort } from '@/core/ports/auth.repository.port';
+import type { ISyncLocalStorePort } from '@/core/ports/sync.ports';
+import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositories/sqlite-sync-store.repository';
+import { syncCoordinator } from '@/application/sync/sync-coordinator';
+import { useSyncStore } from '@/stores/sync.store';
+import { useVisitDraftStore } from '@/stores/visit-draft.store';
+import { useOrderDraftStore } from '@/stores/order-draft.store';
+import { useRoutePlanStore } from '@/stores/route-plan.store';
+import { teamApiService } from '@/infrastructure/api/services/team-api.service';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
 import { useAuthStore } from '@/stores/auth.store';
 import { queryClient } from '@/shared/providers/query-provider';
 
-export function useLogout(repository: IAuthRepositoryPort = authApiService) {
+/**
+ * Signs out and wipes the device database (another seller may sign in next). Changes
+ * still in the outbox are lost: the UI must warn when `pendingCount > 0`.
+ */
+export function useLogout(
+  repository: IAuthRepositoryPort = authApiService,
+  localStore: ISyncLocalStorePort = sqliteSyncStoreRepository,
+) {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
 
@@ -30,6 +45,18 @@ export function useLogout(repository: IAuthRepositoryPort = authApiService) {
       } catch {
         // Local cleanup
       }
+
+      syncCoordinator.cancelScheduled();
+      try {
+        await localStore.clearAll();
+      } catch {
+        // The next sign-in downloads the working set again
+      }
+      useSyncStore.getState().reset();
+      useVisitDraftStore.getState().clearAll();
+      useOrderDraftStore.getState().clearAll();
+      useRoutePlanStore.getState().clearAll();
+      teamApiService.clearCache();
 
       clearSession();
       queryClient.clear();

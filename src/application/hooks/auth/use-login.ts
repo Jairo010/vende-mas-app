@@ -46,7 +46,7 @@ export function useLogin(repository: IAuthRepositoryPort = authApiService) {
         // Ignore haptic error
       }
 
-      router.replace('/(tabs)');
+      router.replace('/(drawer)/tasks' as never);
     },
     onError: async () => {
       try {

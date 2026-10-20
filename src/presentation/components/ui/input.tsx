@@ -2,8 +2,7 @@ import { forwardRef, useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { AlertCircle, X } from 'lucide-react-native';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColors } from '@/theme';
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -35,8 +34,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     ref,
   ) => {
     const [isFocused, setIsFocused] = useState(false);
-    const scheme = useThemeStore((state) => state.getEffectiveScheme());
-    const activeColors = scheme === 'dark' ? darkColors : lightColors;
+    const activeColors = useThemeColors();
 
     const hasError = Boolean(error);
 

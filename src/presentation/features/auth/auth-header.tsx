@@ -1,13 +1,11 @@
 import { Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TrendingUp } from 'lucide-react-native';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
 import { es } from '@/shared/i18n/es';
+import { useThemeColors } from '@/theme';
 
 export function AuthHeader() {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const activeColors = useThemeColors();
 
   return (
     <Animated.View entering={FadeInDown.duration(600)} className="items-center justify-center mb-8">

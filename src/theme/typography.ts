@@ -1,8 +1,14 @@
+/**
+ * Inter is embedded natively by the `expo-font` config plugin (app.json) under this
+ * single family, with one file per weight, so `fontWeight` / `font-semibold` select the
+ * right file on both platforms.
+ */
+export const FONT_FAMILY = 'Inter';
+
 export const typography = {
   fontFamilies: {
-    sans: 'Inter, system-ui, sans-serif',
-    heading: 'Inter, system-ui, sans-serif',
-    mono: 'Courier New, monospace',
+    sans: FONT_FAMILY,
+    heading: FONT_FAMILY,
   },
   fontSizes: {
     xs: 12,

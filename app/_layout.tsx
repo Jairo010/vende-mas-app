@@ -1,7 +1,6 @@
 import '../global.css';
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 import { AppProviders } from '@/shared/providers/app-providers';
 import { useAuthStore } from '@/stores/auth.store';
@@ -13,13 +12,12 @@ configureReanimatedLogger({
   strict: false,
 });
 
-function AuthGuard() {
+function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
   const authHydrated = useAuthStore((state) => state.isHydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const themeHydrated = useThemeStore((state) => state.isHydrated);
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
 
   useEffect(() => {
     if (!authHydrated || !themeHydrated) return;
@@ -29,7 +27,7 @@ function AuthGuard() {
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(app)/(tabs)/agenda');
     }
   }, [isAuthenticated, authHydrated, themeHydrated, segments, router]);
 
@@ -37,18 +35,13 @@ function AuthGuard() {
     return null;
   }
 
-  return (
-    <>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Slot />
-    </>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 export default function RootLayout() {
   return (
     <AppProviders>
-      <AuthGuard />
+      <RootNavigator />
     </AppProviders>
   );
 }

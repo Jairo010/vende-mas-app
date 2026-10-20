@@ -1,11 +1,11 @@
 import { ActivityIndicator, View } from 'react-native';
-import { useThemeStore } from '@/stores/theme.store';
-import { darkColors, lightColors } from '@/theme/colors';
+import { useThemeColors } from '@/theme';
 
 export interface LoadingSpinnerProps {
   size?: 'small' | 'large';
   color?: string;
-  variant?: 'primary' | 'foreground' | 'white';
+  /** `onPrimary`: on top of a primary / destructive button. */
+  variant?: 'primary' | 'foreground' | 'onPrimary';
   className?: string;
 }
 
@@ -15,16 +15,15 @@ export function LoadingSpinner({
   variant = 'primary',
   className = '',
 }: LoadingSpinnerProps) {
-  const scheme = useThemeStore((state) => state.getEffectiveScheme());
-  const activeColors = scheme === 'dark' ? darkColors : lightColors;
+  const colors = useThemeColors();
 
   const spinnerColor =
     color ??
-    (variant === 'white'
-      ? '#FFFFFF'
+    (variant === 'onPrimary'
+      ? colors.primaryForeground
       : variant === 'foreground'
-        ? activeColors.foreground
-        : activeColors.primary);
+        ? colors.foreground
+        : colors.primary);
 
   return (
     <View className={`items-center justify-center ${className}`}>

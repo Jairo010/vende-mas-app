@@ -7,7 +7,14 @@ export interface UseAuthSessionResult {
   isAuthenticated: boolean;
   isHydrated: boolean;
   isAdmin: boolean;
+  isSupervisor: boolean;
   isSeller: boolean;
+  /**
+   * GPS tracking details (accuracy, distance to the store, missing fixes) are a control for
+   * admins and supervisors: sellers only see the OS permission prompt. Locations are always
+   * captured, whatever the role.
+   */
+  canSeeLocationTracking: boolean;
 }
 
 export function useAuthSession(): UseAuthSessionResult {
@@ -16,6 +23,7 @@ export function useAuthSession(): UseAuthSessionResult {
   const isHydrated = useAuthStore((state) => state.isHydrated);
 
   const isAdmin = user?.role === UserRole.ADMIN;
+  const isSupervisor = user?.role === UserRole.SUPERVISOR;
   const isSeller = user?.role === UserRole.SELLER;
 
   return {
@@ -23,6 +31,8 @@ export function useAuthSession(): UseAuthSessionResult {
     isAuthenticated,
     isHydrated,
     isAdmin,
+    isSupervisor,
     isSeller,
+    canSeeLocationTracking: isAdmin || isSupervisor,
   };
 }

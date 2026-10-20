@@ -95,14 +95,10 @@ export function Button({
     onPressOut?.(e);
   };
 
-  const handlePress = async (e: GestureResponderEvent) => {
+  const handlePress = (e: GestureResponderEvent) => {
     if (disabled || isLoading) return;
     if (enableHaptics) {
-      try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } catch {
-        // Haptics unavailable
-      }
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
     onPress?.(e);
   };
@@ -122,7 +118,7 @@ export function Button({
       {isLoading ? (
         <LoadingSpinner
           size="small"
-          variant={variant === 'outline' || variant === 'ghost' ? 'foreground' : 'white'}
+          variant={variant === 'outline' || variant === 'ghost' ? 'foreground' : 'onPrimary'}
         />
       ) : (
         <>

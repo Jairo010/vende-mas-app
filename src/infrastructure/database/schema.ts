@@ -55,6 +55,8 @@ export const visits = sqliteTable(
     status: text('status').notNull(),
     outcome: text('outcome'),
     scheduledAt: text('scheduled_at').notNull(),
+    /** false = planned for the local day of `scheduled_at` only (no agreed time). */
+    hasScheduledTime: integer('has_scheduled_time', { mode: 'boolean' }).notNull().default(true),
     notes: text('notes'),
     startedAt: text('started_at'),
     startLatitude: real('start_latitude'),

@@ -13,6 +13,7 @@ function visit(overrides: Partial<VisitProps> = {}): VisitEntity {
     status: 'SCHEDULED',
     outcome: null,
     scheduledAt: '2026-10-14T14:30:00.000Z',
+    hasScheduledTime: true,
     notes: null,
     start: null,
     end: null,

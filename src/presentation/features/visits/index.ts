@@ -9,3 +9,5 @@ export * from './outcome-selector';
 export * from './reschedule-visit-sheet';
 export * from './cancel-visit-sheet';
 export * from './visit-in-progress-banner';
+export * from './visit-schedule';
+export * from './optional-time-field';

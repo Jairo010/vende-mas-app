@@ -15,6 +15,13 @@
       "when": 1791905053618,
       "tag": "0001_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793111434183,
+      "tag": "0002_visit_optional_time",
+      "breakpoints": true
     }
   ]
 }

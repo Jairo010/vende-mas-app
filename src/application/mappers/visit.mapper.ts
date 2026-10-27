@@ -35,6 +35,7 @@ export class VisitMapper {
         ? pickEnum<VisitOutcome | null>(dto.outcome, VISIT_OUTCOMES, null)
         : null,
       scheduledAt: dto.scheduledAt,
+      hasScheduledTime: dto.hasScheduledTime ?? true,
       notes: dto.notes,
       start: toCheckpoint(dto.start),
       end: toCheckpoint(dto.end),

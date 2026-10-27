@@ -51,6 +51,35 @@ describe('SqliteVisitRepository', () => {
       type: 'ORDER',
       customerId: 'customer-1',
       scheduledAt: '2026-10-15T09:30:00-05:00',
+      hasScheduledTime: true,
+    });
+  });
+
+  it('schedules a visit for the day only, without an agreed time', async () => {
+    const visit = await repository.schedule(
+      {
+        type: 'COLLECTION',
+        customerId: 'customer-1',
+        scheduledAt: '2026-10-15T05:00:00.000Z',
+        hasScheduledTime: false,
+      },
+      SELLER,
+    );
+
+    expect(visit.hasScheduledTime).toBe(false);
+    expect(outboxRows()[0]?.payload).toMatchObject({
+      scheduledAt: '2026-10-15T00:00:00-05:00',
+      hasScheduledTime: false,
+    });
+
+    const rescheduled = await repository.reschedule(visit.id, {
+      scheduledAt: '2026-10-16T15:00:00.000Z',
+      hasScheduledTime: true,
+    });
+    expect(rescheduled.hasScheduledTime).toBe(true);
+    expect(outboxRows()[1]?.payload).toEqual({
+      scheduledAt: '2026-10-16T10:00:00-05:00',
+      hasScheduledTime: true,
     });
   });
 

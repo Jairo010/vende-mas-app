@@ -207,9 +207,9 @@ export default function VisitScreen() {
     }
   };
 
-  const reschedule = async (scheduledAt: string) => {
+  const reschedule = async (scheduledAt: string, hasScheduledTime: boolean) => {
     try {
-      await rescheduleVisit({ id: visit.id, scheduledAt });
+      await rescheduleVisit({ id: visit.id, scheduledAt, hasScheduledTime });
       setOpenSheet(null);
       notify.success(es.visits.toasts.rescheduled);
     } catch (error) {

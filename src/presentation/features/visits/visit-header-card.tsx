@@ -13,7 +13,7 @@ import { Avatar } from '@/presentation/components/ui/avatar';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card } from '@/presentation/components/ui/card';
 import { es } from '@/shared/i18n/es';
-import { formatDateTime } from '@/shared/utils/date';
+import { formatVisitSchedule } from './visit-schedule';
 import { googleMapsPlaceUrl } from '@/shared/utils/maps-links';
 import { useThemeColors } from '@/theme';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from './visit-visuals';
@@ -99,7 +99,7 @@ export function VisitHeaderCard({ visit, showSeller = false }: VisitHeaderCardPr
       <View className="mt-3 gap-1.5">
         <View className="flex-row items-center">
           <CalendarClock size={14} color={colors.mutedForeground} />
-          <Text className="ml-2 text-sm text-foreground">{formatDateTime(visit.scheduledAt)}</Text>
+          <Text className="ml-2 text-sm text-foreground">{formatVisitSchedule(visit)}</Text>
         </View>
         {customer?.address ? (
           <View className="flex-row items-center">

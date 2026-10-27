@@ -2,22 +2,23 @@ import { ScrollView, Text, View } from 'react-native';
 import type { TeamMember } from '@/core/types/team.types';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
 import { Chip } from '@/presentation/components/ui/chip';
-import {
-  DatePickerField,
-  TimePickerField,
-} from '@/presentation/components/ui/date-time-picker-field';
+import { DatePickerField } from '@/presentation/components/ui/date-time-picker-field';
 import { Input } from '@/presentation/components/ui/input';
 import { es } from '@/shared/i18n/es';
 import { todayKey, type DateKey } from '@/shared/utils/date';
+import { OptionalTimeField } from '../optional-time-field';
 
 const MAX_NOTES_LENGTH = 1000;
 
 export interface ScheduleStepProps {
   date: DateKey;
-  time: string;
+  /** `null` = no agreed time (the visit is planned for the day). */
+  time: string | null;
+  /** Offered when the user adds a time. */
+  suggestedTime: string;
   notes: string;
   onChangeDate: (date: DateKey) => void;
-  onChangeTime: (time: string) => void;
+  onChangeTime: (time: string | null) => void;
   onChangeNotes: (notes: string) => void;
   error?: string | null;
   /** Supervisors pick the seller; `null` = the current user. */
@@ -28,10 +29,11 @@ export interface ScheduleStepProps {
   teamUnavailable: boolean;
 }
 
-/** Step 3: local date and time, assigned seller (supervisors) and notes. */
+/** Step 3: local date, optional time, assigned seller (supervisors) and notes. */
 export function ScheduleStep({
   date,
   time,
+  suggestedTime,
   notes,
   onChangeDate,
   onChangeTime,
@@ -52,12 +54,12 @@ export function ScheduleStep({
         minDate={todayKey()}
         onChange={onChangeDate}
       />
-      <TimePickerField
+      <OptionalTimeField
         testID="new-visit-time"
-        label={es.newVisit.time}
         value={time}
+        suggestedTime={suggestedTime}
         onChange={onChangeTime}
-        error={error ?? undefined}
+        error={error}
       />
 
       {canAssignSeller ? (

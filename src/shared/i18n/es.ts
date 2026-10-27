@@ -121,6 +121,14 @@ export const es = {
     inProgressBanner: 'Visita en curso',
     resume: 'Continuar',
     optimalRoute: 'Ver ruta óptima',
+    groups: {
+      OPPORTUNITY: 'Oportunidades',
+      ORDER: 'Pedidos',
+      COLLECTION: 'Cobros',
+    },
+    groupProgress: (done: number, total: number) => `${done} de ${total} hechas`,
+    expandGroup: 'Mostrar visitas',
+    collapseGroup: 'Ocultar visitas',
   },
   route: {
     title: 'Ruta óptima',
@@ -325,6 +333,10 @@ export const es = {
     prospectBadge: 'Nuevo prospecto',
     date: 'Fecha',
     time: 'Hora',
+    timeOptional: 'Hora (opcional)',
+    addTime: 'Agregar hora',
+    removeTime: 'Quitar hora',
+    noTimeHint: 'Sin hora fija: la visita queda para ese día.',
     seller: 'Vendedor asignado',
     me: 'Yo',
     teamUnavailable: 'No se pudo cargar tu equipo. La visita quedará asignada a ti.',
@@ -332,6 +344,7 @@ export const es = {
     notesPlaceholder: 'Objetivo de la visita, qué llevar...',
     submit: 'Agendar visita',
     pastDateError: 'Elige una fecha y hora futuras',
+    pastDayError: 'Elige hoy o una fecha futura',
   },
   customers: {
     title: 'Clientes',

@@ -1,0 +1,1 @@
+ALTER TABLE `visits` ADD `has_scheduled_time` integer DEFAULT true NOT NULL;

@@ -1,3 +1,5 @@
+import type { CompanyProfileDto, UserBranchDto } from './company.dto';
+
 export interface LoginRequestDto {
   email: string;
   password: string;
@@ -16,6 +18,7 @@ export interface UserPayloadDto {
 
 export interface LoginResponseDto {
   userId?: string;
+  companyId?: string | null;
   id?: string;
   email?: string;
   name?: string;
@@ -70,6 +73,9 @@ export interface CurrentUserResponseDto {
   fullName?: string;
   role?: string | { id?: string; name?: string; code?: string };
   isActive?: boolean;
+  companyId?: string | null;
+  company?: CompanyProfileDto | null;
+  branches?: UserBranchDto[];
   createdAt?: string;
   updatedAt?: string;
   user?: UserPayloadDto;

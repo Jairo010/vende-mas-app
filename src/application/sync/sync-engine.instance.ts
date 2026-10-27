@@ -3,6 +3,7 @@ import { sqlitePendingPhotoRepository } from '@/infrastructure/database/reposito
 import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositories/sqlite-sync-store.repository';
 import { syncApiService } from '@/infrastructure/api/services/sync-api.service';
 import { netInfoNetworkAdapter } from '@/infrastructure/network/netinfo-network.adapter';
+import { useAuthStore } from '@/stores/auth.store';
 import { SyncEngine } from './sync-engine';
 
 /** The app's sync engine, wired to the default adapters. */
@@ -12,4 +13,9 @@ export const syncEngine = new SyncEngine({
   remote: syncApiService,
   localStore: sqliteSyncStoreRepository,
   network: netInfoNetworkAdapter,
+  session: {
+    updateCompany: (company) => {
+      useAuthStore.getState().updateCompany(company);
+    },
+  },
 });

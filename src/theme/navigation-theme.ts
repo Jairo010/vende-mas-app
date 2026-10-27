@@ -3,8 +3,12 @@ import type { ColorSchemeName } from './palette';
 import { resolveThemeColors } from './theme-vars';
 import { FONT_FAMILY } from './typography';
 
-function buildNavigationTheme(scheme: ColorSchemeName): Theme {
-  const colors = resolveThemeColors(scheme);
+/** React Navigation theme (headers, tab bar, screen background) from the same palette and brand. */
+export function buildNavigationTheme(
+  scheme: ColorSchemeName,
+  brandColor: string | null = null,
+): Theme {
+  const colors = resolveThemeColors(scheme, brandColor);
   return {
     dark: scheme === 'dark',
     colors: {
@@ -23,9 +27,3 @@ function buildNavigationTheme(scheme: ColorSchemeName): Theme {
     },
   };
 }
-
-/** React Navigation themes derived from the same palette (headers, tab bar, screen background). */
-export const NAVIGATION_THEMES: Readonly<Record<ColorSchemeName, Theme>> = {
-  light: buildNavigationTheme('light'),
-  dark: buildNavigationTheme('dark'),
-};

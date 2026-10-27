@@ -10,9 +10,10 @@ import {
   UnauthorizedError,
   ValidationError,
 } from '@/core/errors/domain.error';
-import type { ApiResponse } from '@/core/types/api.types';
+import { CompanySuspendedError } from '@/core/errors/auth.errors';
 import type { RefreshTokenResponseDto } from '@/infrastructure/api/dto/auth.dto';
 import { useAuthStore } from '@/stores/auth.store';
+import { unwrapApiData } from './unwrap-response';
 
 interface ApiErrorBody {
   error?: { code?: string; message?: string; details?: unknown };
@@ -101,13 +102,13 @@ export function setupInterceptors(instance: AxiosInstance): void {
             throw new UnauthorizedError('No hay token de refresco disponible');
           }
 
-          const refreshResponse = await axios.post<
-            ApiResponse<RefreshTokenResponseDto> | RefreshTokenResponseDto
-          >(`${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`, { refreshToken });
-
-          const responseData = refreshResponse.data;
-          const tokenData: RefreshTokenResponseDto =
-            'statusCode' in responseData ? responseData.data : responseData;
+          const refreshResponse = await axios.post<unknown>(
+            `${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`,
+            { refreshToken },
+          );
+          // The API wraps it as { success, data }: reading the body as the tokens lost every
+          // session when its access token expired.
+          const tokenData = unwrapApiData<RefreshTokenResponseDto>(refreshResponse.data);
 
           const newAccessToken = tokenData.accessToken;
           const newRefreshToken = tokenData.refreshToken;
@@ -132,7 +133,7 @@ export function setupInterceptors(instance: AxiosInstance): void {
           processQueue(refreshErr, null);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
-          useAuthStore.getState().clearSession();
+          useAuthStore.getState().clearSession('SESSION_EXPIRED');
           return Promise.reject(
             new UnauthorizedError('Sesión expirada. Por favor inicia sesión nuevamente.'),
           );
@@ -146,6 +147,14 @@ export function setupInterceptors(instance: AxiosInstance): void {
       const body = error.response.data;
       const errorMessage = body?.error?.message || body?.message || error.message;
       const details = body?.error?.details ?? body?.errors;
+
+      // The company was suspended while signed in: end the session (every request would fail).
+      if (status === 403 && body?.error?.code === 'COMPANY_SUSPENDED') {
+        await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
+        await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
+        useAuthStore.getState().clearSession('COMPANY_SUSPENDED');
+        return Promise.reject(new CompanySuspendedError());
+      }
 
       if (status === 404) {
         return Promise.reject(new NotFoundError(errorMessage, details));

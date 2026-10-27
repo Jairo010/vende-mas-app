@@ -2,24 +2,63 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandMmkvStorage } from '@/infrastructure/storage/mmkv-storage.adapter';
 import type { AuthUser } from '@/core/types/auth.types';
+import type { CompanyProfile } from '@/core/types/company.types';
+import { configureBusiness, resetBusinessConfig } from '@/shared/config/business-config';
+
+/** Why the app signed the user out on its own (shown on the login screen). */
+export type SignOutReason = 'SESSION_EXPIRED' | 'COMPANY_SUSPENDED';
 
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isHydrated: boolean;
+  signOutReason: SignOutReason | null;
   setUser: (user: AuthUser) => void;
-  clearSession: () => void;
+  /** Fresh company settings (every sync pull brings them): modules, zone, currency, brand. */
+  updateCompany: (company: CompanyProfile) => void;
+  clearSession: (reason?: SignOutReason) => void;
   setHydrated: (hydrated: boolean) => void;
+}
+
+/** Dates and money follow the company of the session. */
+function applyCompany(company: CompanyProfile | null): void {
+  if (!company) {
+    resetBusinessConfig();
+    return;
+  }
+  configureBusiness({
+    timeZone: company.timezone,
+    locale: company.locale,
+    currency: company.currency,
+    defaultTaxRate: company.defaultTaxRate,
+  });
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isHydrated: false,
-      setUser: (user) => set({ user, isAuthenticated: true }),
-      clearSession: () => set({ user: null, isAuthenticated: false }),
+      signOutReason: null,
+      setUser: (user) => {
+        applyCompany(user.company);
+        set({ user, isAuthenticated: true, signOutReason: null });
+      },
+      updateCompany: (company) => {
+        const { user } = get();
+        // A pull of another company (stale request after switching users) is ignored.
+        if (!user || (user.companyId !== null && user.companyId !== company.id)) return;
+        applyCompany(company);
+        set({ user: { ...user, companyId: company.id, company } });
+      },
+      clearSession: (reason) => {
+        resetBusinessConfig();
+        // A reason only makes sense if someone was signed in (a failed request before login
+        // must not say "your session expired").
+        const signOutReason = get().isAuthenticated ? (reason ?? null) : null;
+        set({ user: null, isAuthenticated: false, signOutReason });
+      },
       setHydrated: (hydrated) => set({ isHydrated: hydrated }),
     }),
     {
@@ -27,6 +66,16 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => zustandMmkvStorage),
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => (state) => {
+        // Sessions stored before multi-tenancy have no company: the defaults apply until the
+        // next sync pull brings it.
+        if (state?.user && state.isAuthenticated) {
+          state.setUser({
+            ...state.user,
+            companyId: state.user.companyId ?? null,
+            company: state.user.company ?? null,
+            branches: state.user.branches ?? [],
+          });
+        }
         state?.setHydrated(true);
       },
     },

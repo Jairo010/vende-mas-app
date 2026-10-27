@@ -65,6 +65,11 @@ export const es = {
       networkError: 'No se pudo conectar con el servidor. Revisa tu conexión a internet',
       unexpected: 'Ocurrió un error inesperado al iniciar sesión',
     },
+    signOutReasons: {
+      SESSION_EXPIRED: 'Tu sesión expiró. Ingresa de nuevo para seguir trabajando.',
+      COMPANY_SUSPENDED:
+        'La cuenta de tu empresa está suspendida. Comunícate con tu administrador.',
+    },
     toasts: {
       loginSuccess: '¡Bienvenido de nuevo!',
       logoutSuccess: 'Sesión cerrada correctamente',
@@ -85,6 +90,7 @@ export const es = {
     dismiss: 'Cerrar',
   },
   roles: {
+    SUPER_ADMIN: 'Plataforma',
     ADMIN: 'Administrador',
     SUPERVISOR: 'Supervisor',
     SELLER: 'Asesor Comercial',
@@ -663,6 +669,8 @@ export const es = {
   more: {
     title: 'Más',
     profile: 'Perfil',
+    company: 'Empresa',
+    branch: (name: string) => `Sucursal: ${name}`,
     appearance: 'Apariencia',
     theme: 'Tema',
     themeLight: 'Claro',

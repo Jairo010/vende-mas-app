@@ -28,6 +28,7 @@ function emptyChanges(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     receivables: [],
     payments: [],
     settings: null,
+    company: null,
     ...overrides,
   };
 }

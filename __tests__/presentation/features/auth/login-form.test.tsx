@@ -1,3 +1,4 @@
+import { IN_TEST_COMPANY } from '../../../helpers/session';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LoginForm } from '@/presentation/features/auth/login-form';
@@ -72,6 +73,7 @@ describe('LoginForm', () => {
         name: 'Seller',
         role: UserRole.SELLER,
         isActive: true,
+        ...IN_TEST_COMPANY,
       },
       tokens: {
         accessToken: 'access-123',

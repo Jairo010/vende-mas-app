@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Plus, Route } from 'lucide-react-native';
@@ -53,6 +54,7 @@ function greeting(now: Date): string {
 export default function AgendaScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const modules = useCompanyModules();
   const now = useNow(60_000);
   const today = todayKey(now);
   const { user, canSeeLocationTracking } = useAuthSession();
@@ -159,7 +161,7 @@ export default function AgendaScreen() {
               ListHeaderComponent={
                 <View className="gap-3">
                   <AgendaSummary summary={summary} />
-                  {hasRouteToday ? (
+                  {hasRouteToday && modules.has('ROUTES') ? (
                     <Button
                       testID="agenda-optimal-route"
                       variant="outline"

@@ -1,3 +1,4 @@
+import { TEST_COMPANY } from '../../helpers/session';
 import { SyncEngine, MAX_PHOTO_ATTEMPTS } from '@/application/sync/sync-engine';
 import { NetworkError, ValidationError } from '@/core/errors/domain.error';
 import type {
@@ -44,6 +45,7 @@ function changes(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     receivables: [],
     payments: [],
     settings: null,
+    company: null,
     ...overrides,
   };
 }
@@ -158,6 +160,20 @@ describe('SyncEngine', () => {
     );
     expect(localStore.setLastSyncedAt).toHaveBeenCalledWith('2026-10-14T15:00:00.000Z');
     expect(summary).toEqual({ pushed: 2, rejected: 0, pending: 0, pulled: true, error: null });
+  });
+
+  it('hands the company of each pull to the session (modules, zone, currency)', async () => {
+    const company = {
+      ...TEST_COMPANY,
+      enabledModules: ['VISITS' as const],
+      timezone: 'America/Lima',
+    };
+    remote.pull.mockResolvedValue(changes({ company }));
+    const session = { updateCompany: jest.fn() };
+
+    await new SyncEngine({ outbox, photos, remote, localStore, network, session }).run();
+
+    expect(session.updateCompany).toHaveBeenCalledWith(company);
   });
 
   it('does nothing but report OFFLINE when there is no connection', async () => {

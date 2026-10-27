@@ -1,4 +1,5 @@
-import { palette, type ColorSchemeName, type ThemePalette, type ThemeToken } from './palette';
+import { brandedPalette } from './brand';
+import type { ColorSchemeName, ThemePalette, ThemeToken } from './palette';
 
 export type ResolvedThemeColors = Readonly<Record<ThemeToken, string>>;
 
@@ -34,9 +35,15 @@ export function hexColor(triplet: string): string {
   return `#${channel(0)}${channel(8)}${channel(4)}`;
 }
 
-/** CSS variables (`--primary: 0 84% 50%`) for NativeWind `vars()`. */
-export function buildThemeVariables(scheme: ColorSchemeName): Record<string, string> {
-  const tokens = palette[scheme];
+/**
+ * CSS variables (`--primary: 0 84% 50%`) for NativeWind `vars()`, with the company brand (if
+ * any) as primary.
+ */
+export function buildThemeVariables(
+  scheme: ColorSchemeName,
+  brandColor: string | null = null,
+): Record<string, string> {
+  const tokens = brandedPalette(scheme, brandColor);
   return Object.fromEntries(
     (Object.keys(tokens) as ThemeToken[]).map((token) => [
       `--${toCssTokenName(token)}`,
@@ -46,8 +53,11 @@ export function buildThemeVariables(scheme: ColorSchemeName): Record<string, str
 }
 
 /** Ready-to-use colors for APIs that do not accept classes (icons, StatusBar, navigation). */
-export function resolveThemeColors(scheme: ColorSchemeName): ResolvedThemeColors {
-  const tokens: Readonly<ThemePalette> = palette[scheme];
+export function resolveThemeColors(
+  scheme: ColorSchemeName,
+  brandColor: string | null = null,
+): ResolvedThemeColors {
+  const tokens: Readonly<ThemePalette> = brandedPalette(scheme, brandColor);
   return Object.fromEntries(
     (Object.keys(tokens) as ThemeToken[]).map((token) => [token, hslColor(tokens[token])]),
   ) as ResolvedThemeColors;

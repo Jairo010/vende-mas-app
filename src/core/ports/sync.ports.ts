@@ -1,3 +1,4 @@
+import type { CompanyProfile } from '../types/company.types';
 import type { CustomerEntity } from '../entities/customer.entity';
 import type { OrderEntity } from '../entities/order.entity';
 import type { ProductEntity } from '../entities/product.entity';
@@ -66,6 +67,13 @@ export interface SyncChangeSet {
   payments: PaymentEntity[];
   /** Credit rules (server configuration) applied offline. */
   settings: CollectionsSettings | null;
+  /** The company as it is now (modules, zone, currency, brand); null on older servers. */
+  company: CompanyProfile | null;
+}
+
+/** Receives the company settings each pull brings (kept with the session). */
+export interface ICompanySessionPort {
+  updateCompany(company: CompanyProfile): void;
 }
 
 /** Remote side of the sync protocol (docs/sync-protocol.md in the API). */

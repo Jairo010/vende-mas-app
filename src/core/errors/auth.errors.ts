@@ -26,3 +26,26 @@ export class TokenExpiredError extends DomainError {
     super(message, 401, details);
   }
 }
+
+export class CompanySuspendedError extends DomainError {
+  public readonly code = 'COMPANY_SUSPENDED';
+
+  constructor(
+    message = 'La cuenta de tu empresa está suspendida. Comunícate con tu administrador',
+    details?: unknown,
+  ) {
+    super(message, 403, details);
+  }
+}
+
+/** Platform staff (no company) manage Vende Más from the web, not from the field app. */
+export class WebOnlyAccountError extends DomainError {
+  public readonly code = 'AUTH_WEB_ONLY_ACCOUNT';
+
+  constructor(
+    message = 'Esta cuenta es de la plataforma: ingresa desde la web de Vende Más',
+    details?: unknown,
+  ) {
+    super(message, 403, details);
+  }
+}

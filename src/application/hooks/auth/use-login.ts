@@ -3,17 +3,35 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { authApiService } from '@/infrastructure/api/services/auth-api.service';
 import type { IAuthRepositoryPort } from '@/core/ports/auth.repository.port';
+import type { ISyncLocalStorePort } from '@/core/ports/sync.ports';
+import { WebOnlyAccountError } from '@/core/errors/auth.errors';
+import { UserRole } from '@/core/types/role.enum';
+import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositories/sqlite-sync-store.repository';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { mmkvStorageAdapter } from '@/infrastructure/storage/mmkv-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
 import { useAuthStore } from '@/stores/auth.store';
-import type { AuthSession, LoginCredentials } from '@/core/types/auth.types';
+import { claimLocalData } from '@/application/session/local-data-owner';
+import type { AuthUser, LoginCredentials } from '@/core/types/auth.types';
 
-export function useLogin(repository: IAuthRepositoryPort = authApiService) {
+async function clearTokens(): Promise<void> {
+  await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
+  await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
+}
+
+/**
+ * Signs in: stores the tokens, loads the full profile (company, branches, modules) from
+ * `auth/me`, makes the device data belong to this user and opens the agenda. Platform
+ * accounts (no company) are turned away: they work in the web CRM.
+ */
+export function useLogin(
+  repository: IAuthRepositoryPort = authApiService,
+  localStore: ISyncLocalStorePort = sqliteSyncStoreRepository,
+) {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
 
-  const mutation = useMutation<AuthSession, Error, LoginCredentials>({
+  const mutation = useMutation<AuthUser, Error, LoginCredentials>({
     mutationFn: async (credentials: LoginCredentials) => {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -21,14 +39,28 @@ export function useLogin(repository: IAuthRepositoryPort = authApiService) {
         // Haptics not supported or disabled on device
       }
 
-      return repository.login(credentials);
-    },
-    onSuccess: async (session: AuthSession, variables: LoginCredentials) => {
+      const session = await repository.login(credentials);
       await secureStorageAdapter.setItem(STORAGE_KEYS.ACCESS_TOKEN, session.tokens.accessToken);
       if (session.tokens.refreshToken) {
         await secureStorageAdapter.setItem(STORAGE_KEYS.REFRESH_TOKEN, session.tokens.refreshToken);
       }
 
+      let user: AuthUser;
+      try {
+        user = await repository.getCurrentUser();
+      } catch (error) {
+        await clearTokens();
+        throw error;
+      }
+      if (user.role === UserRole.SUPER_ADMIN || user.companyId === null) {
+        await clearTokens();
+        throw new WebOnlyAccountError();
+      }
+
+      await claimLocalData(user, localStore);
+      return user;
+    },
+    onSuccess: async (user: AuthUser, variables: LoginCredentials) => {
       if (variables.rememberMe) {
         mmkvStorageAdapter.setString(
           STORAGE_KEYS.REMEMBERED_EMAIL,
@@ -38,7 +70,7 @@ export function useLogin(repository: IAuthRepositoryPort = authApiService) {
         mmkvStorageAdapter.delete(STORAGE_KEYS.REMEMBERED_EMAIL);
       }
 
-      setUser(session.user);
+      setUser(user);
 
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -46,7 +78,7 @@ export function useLogin(repository: IAuthRepositoryPort = authApiService) {
         // Ignore haptic error
       }
 
-      router.replace('/(drawer)/tasks' as never);
+      router.replace('/(app)/(tabs)/agenda');
     },
     onError: async () => {
       try {

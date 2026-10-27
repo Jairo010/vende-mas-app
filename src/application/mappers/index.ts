@@ -5,3 +5,4 @@ export * from './customer.mapper';
 export * from './catalog.mapper';
 export * from './order.mapper';
 export * from './collection.mapper';
+export * from './company.mapper';

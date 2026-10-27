@@ -1,3 +1,4 @@
+import type { CompanyProfileDto } from './company.dto';
 import type { CategoryResponseDto, ProductResponseDto, PromotionResponseDto } from './catalog.dto';
 import type {
   CollectionPaymentResponseDto,
@@ -60,6 +61,8 @@ export interface SyncPullResponseDto {
   receivables?: ReceivableResponseDto[];
   payments?: CollectionPaymentResponseDto[];
   settings?: SyncSettingsDto;
+  /** Absent on servers before multi-tenancy. */
+  company?: CompanyProfileDto;
 }
 
 /** `POST /files/photos` */

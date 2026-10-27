@@ -1,5 +1,7 @@
 import { UserRole } from '@/core/types/role.enum';
 import type { AuthSession, AuthUser } from '@/core/types/auth.types';
+import { CompanyMapper } from './company.mapper';
+import type { CompanyProfileDto, UserBranchDto } from '@/infrastructure/api/dto/company.dto';
 import type {
   CurrentUserResponseDto,
   LoginResponseDto,
@@ -27,6 +29,9 @@ export class AuthMapper {
     }
 
     const normalized = roleStr.trim().toUpperCase();
+    if (normalized === 'SUPER_ADMIN') {
+      return UserRole.SUPER_ADMIN;
+    }
     if (normalized === 'ADMIN' || normalized === 'ADMINISTRATOR') {
       return UserRole.ADMIN;
     }
@@ -60,6 +65,9 @@ export class AuthMapper {
     const name = String(source.name || source.fullName || email.split('@')[0] || 'Usuario');
     const role = AuthMapper.toDomainRole(source.role);
     const isActive = typeof source.isActive === 'boolean' ? source.isActive : true;
+    const company = CompanyMapper.toProfile(source.company as CompanyProfileDto | null | undefined);
+    const companyId =
+      typeof source.companyId === 'string' ? source.companyId : (company?.id ?? null);
 
     return {
       id,
@@ -67,6 +75,9 @@ export class AuthMapper {
       name,
       role,
       isActive,
+      companyId,
+      company,
+      branches: CompanyMapper.toBranches(source.branches as UserBranchDto[] | undefined),
     };
   }
 

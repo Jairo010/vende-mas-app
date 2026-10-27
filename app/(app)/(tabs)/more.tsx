@@ -1,4 +1,5 @@
 import { Alert, ScrollView, Text, View } from 'react-native';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { HandCoins, LogOut } from 'lucide-react-native';
@@ -16,12 +17,15 @@ import { SyncPanel } from '@/presentation/features/sync/sync-panel';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
 
-/** Profile, appearance (theme), sync status and session. */
+/** Profile (company and branch), appearance (theme), sync status and session. */
 export default function MoreScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const modules = useCompanyModules();
   const { user } = useAuthSession();
   const { pendingCount } = useSyncStatus();
+  // Records are assigned by the server to the primary branch (ADR 0008).
+  const branch = user?.branches.find((item) => item.isPrimary) ?? user?.branches[0] ?? null;
   const { logout, isPending } = useLogout();
 
   const confirmLogout = () => {
@@ -54,24 +58,40 @@ export default function MoreScreen() {
           </View>
         </Card>
 
+        {user?.company ? (
+          <Card className="gap-1 p-4" testID="more-company">
+            <Text className="text-xs text-muted-foreground">{es.more.company}</Text>
+            <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
+              {user.company.tradeName}
+            </Text>
+            {branch ? (
+              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+                {es.more.branch(branch.name)}
+              </Text>
+            ) : null}
+          </Card>
+        ) : null}
+
         <Card className="p-4">
           <Text className="mb-3 text-base font-semibold text-foreground">{es.more.appearance}</Text>
           <ThemeSelector />
         </Card>
 
-        <Card className="overflow-hidden p-0">
-          <ListItem
-            testID="more-collections"
-            title={es.more.collections}
-            subtitle={es.more.collectionsDescription}
-            leading={
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                <HandCoins size={18} color={colors.foreground} />
-              </View>
-            }
-            onPress={() => router.push('/(app)/collections')}
-          />
-        </Card>
+        {modules.has('COLLECTIONS') ? (
+          <Card className="overflow-hidden p-0">
+            <ListItem
+              testID="more-collections"
+              title={es.more.collections}
+              subtitle={es.more.collectionsDescription}
+              leading={
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                  <HandCoins size={18} color={colors.foreground} />
+                </View>
+              }
+              onPress={() => router.push('/(app)/collections')}
+            />
+          </Card>
+        ) : null}
 
         <SyncPanel onOpenQueue={() => router.push('/(app)/sync')} />
 

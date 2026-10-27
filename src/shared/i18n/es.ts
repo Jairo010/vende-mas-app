@@ -69,6 +69,8 @@ export const es = {
       SESSION_EXPIRED: 'Tu sesión expiró. Ingresa de nuevo para seguir trabajando.',
       COMPANY_SUSPENDED:
         'La cuenta de tu empresa está suspendida. Comunícate con tu administrador.',
+      BRANCH_REMOVED:
+        'Ya no perteneces a la sucursal en la que trabajabas. Ingresa de nuevo y elige otra.',
     },
     toasts: {
       loginSuccess: '¡Bienvenido de nuevo!',
@@ -666,11 +668,33 @@ export const es = {
       PAYMENT: 'Cobro',
     },
   },
+  branch: {
+    chooseTitle: 'Elige tu sucursal',
+    chooseSubtitle: '¿En qué sucursal trabajarás? Puedes cambiarla después desde Más.',
+    switchTitle: 'Cambiar de sucursal',
+    switchSubtitle: 'Lo nuevo que registres irá a la sucursal elegida.',
+    primary: 'Principal',
+    current: 'Actual',
+    continue: 'Continuar',
+    switch: 'Cambiar de sucursal',
+    switched: (name: string) => `Ahora trabajas en ${name}`,
+    otherAccount: 'La sucursal es de otra cuenta',
+    otherAccountHint: 'Si en esa sucursal trabajas con otro usuario',
+    otherAccountTitle: 'Cambiar de cuenta',
+    otherAccountMessage:
+      'Se cerrará tu sesión. Vuelve a iniciar sesión con la cuenta de la otra sucursal.',
+    otherAccountPendingMessage:
+      'Se cerrará tu sesión y tienes cambios sin enviar: se perderán. Sincroniza primero o vuelve a iniciar sesión con la cuenta de la otra sucursal.',
+    otherAccountConfirm: 'Cerrar sesión',
+    pendingTitle: 'Tienes cambios sin enviar',
+    pendingMessage:
+      'Sincroniza antes de cambiar de sucursal, así tus cambios quedan en la sucursal donde los hiciste.',
+    workingIn: (name: string) => `Trabajando en ${name}`,
+  },
   more: {
     title: 'Más',
     profile: 'Perfil',
     company: 'Empresa',
-    branch: (name: string) => `Sucursal: ${name}`,
     appearance: 'Apariencia',
     theme: 'Tema',
     themeLight: 'Claro',

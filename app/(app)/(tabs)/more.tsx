@@ -2,9 +2,10 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { HandCoins, LogOut } from 'lucide-react-native';
+import { HandCoins, LogOut, Store } from 'lucide-react-native';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useLogout } from '@/application/hooks/auth/use-logout';
+import { useWorkingBranch } from '@/application/hooks/auth/use-working-branch';
 import { useSyncStatus } from '@/application/hooks/sync/use-sync-status';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { Avatar } from '@/presentation/components/ui/avatar';
@@ -24,8 +25,8 @@ export default function MoreScreen() {
   const modules = useCompanyModules();
   const { user } = useAuthSession();
   const { pendingCount } = useSyncStatus();
-  // Records are assigned by the server to the primary branch (ADR 0008).
-  const branch = user?.branches.find((item) => item.isPrimary) ?? user?.branches[0] ?? null;
+  // The branch the seller works in: their new records are assigned to it.
+  const { active: branch } = useWorkingBranch();
   const { logout, isPending } = useLogout();
 
   const confirmLogout = () => {
@@ -59,16 +60,24 @@ export default function MoreScreen() {
         </Card>
 
         {user?.company ? (
-          <Card className="gap-1 p-4" testID="more-company">
-            <Text className="text-xs text-muted-foreground">{es.more.company}</Text>
-            <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
-              {user.company.tradeName}
-            </Text>
-            {branch ? (
-              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                {es.more.branch(branch.name)}
+          <Card className="overflow-hidden p-0" testID="more-company">
+            <View className="gap-1 p-4">
+              <Text className="text-xs text-muted-foreground">{es.more.company}</Text>
+              <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
+                {user.company.tradeName}
               </Text>
-            ) : null}
+            </View>
+            <ListItem
+              testID="more-branch"
+              title={branch ? es.branch.workingIn(branch.name) : es.branch.chooseTitle}
+              subtitle={es.branch.switch}
+              leading={
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                  <Store size={18} color={colors.foreground} />
+                </View>
+              }
+              onPress={() => router.push({ pathname: '/branch', params: { mode: 'switch' } })}
+            />
           </Card>
         ) : null}
 

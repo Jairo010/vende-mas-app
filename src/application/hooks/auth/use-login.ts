@@ -6,6 +6,7 @@ import type { IAuthRepositoryPort } from '@/core/ports/auth.repository.port';
 import type { ISyncLocalStorePort } from '@/core/ports/sync.ports';
 import { WebOnlyAccountError } from '@/core/errors/auth.errors';
 import { UserRole } from '@/core/types/role.enum';
+import { needsBranchChoice } from '@/core/types/company.types';
 import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositories/sqlite-sync-store.repository';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { mmkvStorageAdapter } from '@/infrastructure/storage/mmkv-storage.adapter';
@@ -21,7 +22,8 @@ async function clearTokens(): Promise<void> {
 
 /**
  * Signs in: stores the tokens, loads the full profile (company, branches, modules) from
- * `auth/me`, makes the device data belong to this user and opens the agenda. Platform
+ * `auth/me`, makes the device data belong to this user and opens the agenda (or, for users of
+ * several branches, the branch choice). Platform
  * accounts (no company) are turned away: they work in the web CRM.
  */
 export function useLogin(
@@ -78,7 +80,11 @@ export function useLogin(
         // Ignore haptic error
       }
 
-      router.replace('/(app)/(tabs)/agenda');
+      // Users of several branches first choose where they work.
+      const { activeBranchId } = useAuthStore.getState();
+      router.replace(
+        needsBranchChoice(user.branches, activeBranchId) ? '/branch' : '/(app)/(tabs)/agenda',
+      );
     },
     onError: async () => {
       try {

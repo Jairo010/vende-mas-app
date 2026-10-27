@@ -36,9 +36,14 @@ was.
   dead ends. With no company known yet (old session), nothing is hidden until the first sync.
 - **Brand**: the company color replaces `primary` / `ring` in light and dark (lifted on dark
   backgrounds), with a readable foreground; `palette.ts` stays the single source for the rest.
-- **Branches**: the app shows the seller's branch but has **no branch selector**. The server
-  assigns every record to the seller's primary branch (API ADR 0022: never sent by clients), so
-  a selector would promise something the API does not do.
+- **Working branch**: a user of several branches chooses where they work right after signing in
+  (`/branch`) and can switch later from Más; a single branch is chosen automatically. The choice
+  is kept with the session and sent as `X-Branch-Id`, so the records they create go to that
+  branch (API ADR 0022). Switching is refused while changes wait to be sent (they would land in
+  the new branch). A branch where they work with **another account** cannot be listed: that
+  option warns that the session will close and signs out so they log in with the other account.
+  If the API answers `BRANCH_NOT_ASSIGNED` (the branch was taken from them) the session ends and
+  the login screen says why.
 
 ## Consequences
 

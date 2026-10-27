@@ -115,3 +115,42 @@ describe('useAuthStore sign-out reason', () => {
     expect(useAuthStore.getState().signOutReason).toBeNull();
   });
 });
+
+describe('useAuthStore working branch', () => {
+  const twoBranches = {
+    id: 'usr-2',
+    email: 'seller@vendemas.com',
+    name: 'Seller',
+    role: UserRole.SELLER,
+    isActive: true,
+    ...IN_TEST_COMPANY,
+    branches: [
+      { id: 'b-1', code: 'MATRIZ', name: 'Matriz', isPrimary: true },
+      { id: 'b-2', code: 'NORTE', name: 'Norte', isPrimary: false },
+    ],
+  };
+
+  afterEach(() => {
+    useAuthStore.getState().clearSession();
+  });
+
+  it('keeps the chosen branch and refuses one that is not the user’s', () => {
+    useAuthStore.getState().setUser(twoBranches);
+    expect(useAuthStore.getState().activeBranchId).toBeNull();
+
+    useAuthStore.getState().setActiveBranch('b-2');
+    useAuthStore.getState().setActiveBranch('b-9');
+
+    expect(useAuthStore.getState().activeBranchId).toBe('b-2');
+  });
+
+  it('forgets the branch on sign-out', () => {
+    useAuthStore.getState().setUser(twoBranches);
+    useAuthStore.getState().setActiveBranch('b-2');
+
+    useAuthStore.getState().clearSession('BRANCH_REMOVED');
+
+    expect(useAuthStore.getState().activeBranchId).toBeNull();
+    expect(useAuthStore.getState().signOutReason).toBe('BRANCH_REMOVED');
+  });
+});

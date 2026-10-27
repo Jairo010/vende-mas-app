@@ -31,3 +31,23 @@ export interface UserBranch {
 export function hasModule(company: CompanyProfile | null, module: CompanyModule): boolean {
   return company?.enabledModules.includes(module) ?? false;
 }
+
+/**
+ * Branch the user works in: the chosen one if it is still theirs, the only one when they have
+ * a single branch, otherwise none yet (they must choose).
+ */
+export function resolveActiveBranch(
+  branches: readonly UserBranch[],
+  chosenId: string | null,
+): string | null {
+  if (chosenId && branches.some((branch) => branch.id === chosenId)) return chosenId;
+  return branches.length === 1 ? (branches[0]?.id ?? null) : null;
+}
+
+/** A user of several branches must pick one before working (and can switch later). */
+export function needsBranchChoice(
+  branches: readonly UserBranch[],
+  activeId: string | null,
+): boolean {
+  return branches.length > 1 && activeId === null;
+}

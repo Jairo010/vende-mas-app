@@ -37,6 +37,8 @@ export interface VisitResponseDto {
   status: string;
   outcome: string | null;
   scheduledAt: string;
+  /** Missing on servers that predate the optional time (always timed there). */
+  hasScheduledTime?: boolean;
   notes: string | null;
   start: VisitCheckpointDto | null;
   end: VisitCheckpointDto | null;
@@ -60,6 +62,7 @@ export interface ScheduleVisitRequestDto {
   type: string;
   customerId: string;
   scheduledAt: string;
+  hasScheduledTime: boolean;
   notes?: string;
   sellerId?: string;
   parentVisitId?: string;
@@ -83,6 +86,7 @@ export interface CompleteVisitRequestDto {
 /** `PATCH /visits/:id/reschedule` (sync: VISIT RESCHEDULE). */
 export interface RescheduleVisitRequestDto {
   scheduledAt: string;
+  hasScheduledTime: boolean;
   notes?: string;
 }
 

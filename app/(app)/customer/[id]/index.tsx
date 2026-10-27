@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -60,6 +61,7 @@ export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useThemeColors();
+  const modules = useCompanyModules();
   const { customer, isLoading } = useCustomer(id);
   const { visits } = useCustomerVisits(id);
   const ordersFilter = useMemo(() => ({ customerId: id }), [id]);
@@ -145,7 +147,7 @@ export default function CustomerDetailScreen() {
               router.push({ pathname: '/(app)/visit/new', params: { customerId: customer.id } })
             }
           />
-          {customer.canTakeOrders() ? (
+          {customer.canTakeOrders() && modules.has('ORDERS') ? (
             <QuickAction
               testID="customer-new-order"
               label={es.customers.actions.newOrder}
@@ -188,7 +190,7 @@ export default function CustomerDetailScreen() {
           </Button>
         ) : null}
 
-        {customer.canTakeOrders() ? (
+        {customer.canTakeOrders() && modules.has('COLLECTIONS') ? (
           <CollectionPanel
             customerId={customer.id}
             onCollect={(receivable) =>

@@ -52,8 +52,10 @@ export interface VisitFilter {
 export interface ScheduleVisitInput {
   type: VisitType;
   customerId: string;
-  /** ISO instant. */
+  /** ISO instant; the local midnight of the day when there is no agreed time. */
   scheduledAt: string;
+  /** false = planned for the day only. Defaults to true. */
+  hasScheduledTime?: boolean;
   notes?: string;
   /** SUPERVISOR / ADMIN: seller who performs the visit. Defaults to the current user. */
   sellerId?: string;
@@ -73,8 +75,10 @@ export interface CompleteVisitInput {
 }
 
 export interface RescheduleVisitInput {
-  /** ISO instant. */
+  /** ISO instant; the local midnight of the day when there is no agreed time. */
   scheduledAt: string;
+  /** false = moved to a day without an agreed time. Defaults to true. */
+  hasScheduledTime?: boolean;
   notes?: string;
 }
 

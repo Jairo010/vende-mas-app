@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Plus, Route } from 'lucide-react-native';
@@ -10,6 +11,7 @@ import { useCheckInVisit } from '@/application/hooks/visits/use-check-in-visit';
 import { useVisitInProgress } from '@/application/hooks/visits/use-visit-in-progress';
 import { useVisits } from '@/application/hooks/visits/use-visits';
 import type { VisitEntity } from '@/core/entities/visit.entity';
+import type { VisitType } from '@/core/types/visit.types';
 import { VisitAlreadyInProgressError } from '@/core/errors/visit.errors';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { Button } from '@/presentation/components/ui/button';
@@ -24,7 +26,9 @@ import {
   summarizeDay,
   visibleMonthRange,
 } from '@/presentation/features/agenda/agenda-marks';
+import { groupVisitsByType } from '@/presentation/features/agenda/agenda-groups';
 import { AgendaSummary } from '@/presentation/features/agenda/agenda-summary';
+import { AgendaTypeGroup } from '@/presentation/features/agenda/agenda-type-group';
 import { VisitCard } from '@/presentation/features/visits/visit-card';
 import { VisitInProgressBanner } from '@/presentation/features/visits/visit-in-progress-banner';
 import { useNow } from '@/shared/hooks/use-now';
@@ -47,17 +51,21 @@ function greeting(now: Date): string {
 }
 
 /**
- * Home: calendar with dots per visit type, the day's summary and timeline, the visit in
- * progress and quick check-in. Everything reads the device database (works offline).
+ * Home: calendar with dots per visit type, the day's summary, the day's visits grouped by type
+ * (collapsible), the visit in progress and quick check-in. Everything reads the device
+ * database (works offline).
  */
 export default function AgendaScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const modules = useCompanyModules();
   const now = useNow(60_000);
   const today = todayKey(now);
   const { user, canSeeLocationTracking } = useAuthSession();
   const [selectedDate, setSelectedDate] = useState<DateKey>(today);
   const [startingId, setStartingId] = useState<string | null>(null);
+  // Groups start collapsed: the seller opens the type they are working on.
+  const [expandedTypes, setExpandedTypes] = useState<ReadonlySet<VisitType>>(() => new Set());
 
   // One query per visible month: it feeds both the calendar dots and the day list.
   const month = selectedDate.slice(0, 7);
@@ -76,12 +84,21 @@ export default function AgendaScreen() {
     [visits, selectedDate],
   );
   const summary = useMemo(() => summarizeDay(dayVisits), [dayVisits]);
+  const groups = useMemo(() => groupVisitsByType(dayVisits), [dayVisits]);
   // The optimal route covers today's own pending visits.
   const hasRouteToday =
     selectedDate === today &&
     dayVisits.some((visit) => visit.isAssignedTo(user?.id) && isPendingForRoute(visit));
 
   const firstName = user?.name.split(' ')[0] ?? '';
+
+  const toggleGroup = (type: VisitType) =>
+    setExpandedTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
 
   const openVisit = (visit: VisitEntity) =>
     router.push({ pathname: '/(app)/visit/[id]', params: { id: visit.id } });
@@ -153,13 +170,13 @@ export default function AgendaScreen() {
             </View>
           ) : (
             <FlatList
-              data={dayVisits}
-              keyExtractor={(visit) => visit.id}
+              data={groups}
+              keyExtractor={(group) => group.type}
               contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1, paddingBottom: 96 }}
               ListHeaderComponent={
                 <View className="gap-3">
                   <AgendaSummary summary={summary} />
-                  {hasRouteToday ? (
+                  {hasRouteToday && modules.has('ROUTES') ? (
                     <Button
                       testID="agenda-optimal-route"
                       variant="outline"
@@ -171,13 +188,23 @@ export default function AgendaScreen() {
                   ) : null}
                 </View>
               }
-              renderItem={({ item }) => (
-                <VisitCard
-                  visit={item}
-                  onPress={openVisit}
-                  onStart={canStartFromAgenda(item) ? startVisit : undefined}
-                  isStarting={startingId === item.id}
-                />
+              renderItem={({ item: group }) => (
+                <AgendaTypeGroup
+                  group={group}
+                  expanded={expandedTypes.has(group.type)}
+                  onToggle={toggleGroup}
+                >
+                  {group.visits.map((visit) => (
+                    <VisitCard
+                      key={visit.id}
+                      visit={visit}
+                      showType={false}
+                      onPress={openVisit}
+                      onStart={canStartFromAgenda(visit) ? startVisit : undefined}
+                      isStarting={startingId === visit.id}
+                    />
+                  ))}
+                </AgendaTypeGroup>
               )}
               refreshControl={
                 <RefreshControl

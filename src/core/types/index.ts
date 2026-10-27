@@ -1,6 +1,7 @@
 export * from './api.types';
 export * from './auth.types';
 export * from './role.enum';
+export * from './company.types';
 export * from './geo.types';
 export * from './visit.types';
 export * from './customer.types';

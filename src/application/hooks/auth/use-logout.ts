@@ -14,6 +14,7 @@ import { teamApiService } from '@/infrastructure/api/services/team-api.service';
 import { secureStorageAdapter } from '@/infrastructure/storage/secure-storage.adapter';
 import { STORAGE_KEYS } from '@/shared/constants/storage-keys.constants';
 import { useAuthStore } from '@/stores/auth.store';
+import { releaseLocalData } from '@/application/session/local-data-owner';
 import { queryClient } from '@/shared/providers/query-provider';
 
 /**
@@ -49,8 +50,9 @@ export function useLogout(
       syncCoordinator.cancelScheduled();
       try {
         await localStore.clearAll();
+        releaseLocalData();
       } catch {
-        // The next sign-in downloads the working set again
+        // The next sign-in downloads the working set again (and wipes it if it is not theirs)
       }
       useSyncStore.getState().reset();
       useVisitDraftStore.getState().clearAll();

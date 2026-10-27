@@ -28,6 +28,7 @@ function emptyChanges(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     receivables: [],
     payments: [],
     settings: null,
+    company: null,
     ...overrides,
   };
 }
@@ -68,6 +69,7 @@ function serverVisit(overrides: Partial<VisitProps> = {}): VisitEntity {
     status: 'SCHEDULED',
     outcome: null,
     scheduledAt: '2026-10-14T16:00:00.000Z',
+    hasScheduledTime: true,
     notes: null,
     start: null,
     end: null,

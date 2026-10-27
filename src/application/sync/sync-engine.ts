@@ -1,5 +1,6 @@
 import { DomainError } from '@/core/errors/domain.error';
 import type {
+  ICompanySessionPort,
   INetworkStatusPort,
   IOutboxPort,
   IPendingPhotoPort,
@@ -28,6 +29,8 @@ export interface SyncEngineDependencies {
   remote: ISyncRemotePort;
   localStore: ISyncLocalStorePort;
   network: INetworkStatusPort;
+  /** Keeps the session company up to date (modules, zone, currency, brand). */
+  session?: ICompanySessionPort;
   now?: () => Date;
 }
 
@@ -232,6 +235,7 @@ export class SyncEngine {
       }
 
       await this.deps.localStore.applyPull(changes);
+      if (changes.company) this.deps.session?.updateCompany(changes.company);
       await this.deps.localStore.setCursor(changes.cursor);
       cursor = changes.cursor;
       if (!changes.hasMore) return;

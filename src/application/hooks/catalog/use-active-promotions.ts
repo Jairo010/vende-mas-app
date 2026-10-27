@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCompanyModules } from '../auth/use-company-modules';
 import type { ICatalogRepositoryPort } from '@/core/ports/catalog.repository.port';
 import type { Promotion } from '@/core/types/catalog.types';
 import { sqliteCatalogRepository } from '@/infrastructure/database/repositories/sqlite-catalog.repository';
@@ -11,5 +12,7 @@ export function useActivePromotions(repository: ICatalogRepositoryPort = sqliteC
     queryFn: () => repository.findActivePromotions(),
   });
 
-  return { promotions: query.data ?? [], isLoading: query.isLoading };
+  const { has } = useCompanyModules();
+  // Without the module the server prices orders without promotions: do not show them.
+  return { promotions: has('PROMOTIONS') ? (query.data ?? []) : [], isLoading: query.isLoading };
 }

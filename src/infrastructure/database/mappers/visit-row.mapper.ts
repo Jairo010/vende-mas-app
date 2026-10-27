@@ -50,6 +50,7 @@ export class VisitRowMapper {
       status: row.status as VisitStatus,
       outcome: row.outcome as VisitOutcome | null,
       scheduledAt: row.scheduledAt,
+      hasScheduledTime: row.hasScheduledTime,
       notes: row.notes,
       start: toCheckpoint(
         row.startedAt,
@@ -83,6 +84,7 @@ export class VisitRowMapper {
       status: entity.status,
       outcome: entity.outcome,
       scheduledAt: entity.scheduledAt,
+      hasScheduledTime: entity.hasScheduledTime,
       notes: entity.notes,
       startedAt: entity.start?.at ?? null,
       startLatitude: entity.start?.location?.latitude ?? null,

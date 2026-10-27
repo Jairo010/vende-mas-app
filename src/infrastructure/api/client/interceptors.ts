@@ -10,9 +10,10 @@ import {
   UnauthorizedError,
   ValidationError,
 } from '@/core/errors/domain.error';
-import type { ApiResponse } from '@/core/types/api.types';
+import { CompanySuspendedError } from '@/core/errors/auth.errors';
 import type { RefreshTokenResponseDto } from '@/infrastructure/api/dto/auth.dto';
-import { useAuthStore } from '@/stores/auth.store';
+import { type SignOutReason, useAuthStore } from '@/stores/auth.store';
+import { unwrapApiData } from './unwrap-response';
 
 interface ApiErrorBody {
   error?: { code?: string; message?: string; details?: unknown };
@@ -29,6 +30,15 @@ export class HttpError extends DomainError {
     this.code = apiCode ?? `HTTP_${statusCode}`;
   }
 }
+
+/** Sent with every request once the user chose where they work. */
+export const ACTIVE_BRANCH_HEADER = 'X-Branch-Id';
+
+/** API errors after which the session cannot continue. */
+const SESSION_ENDING_CODES: Readonly<Record<string, SignOutReason>> = {
+  COMPANY_SUSPENDED: 'COMPANY_SUSPENDED',
+  BRANCH_NOT_ASSIGNED: 'BRANCH_REMOVED',
+};
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -55,6 +65,11 @@ export function setupInterceptors(instance: AxiosInstance): void {
         const token = await secureStorageAdapter.getItem(STORAGE_KEYS.ACCESS_TOKEN);
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+        }
+        // The branch the seller works in: their records are assigned to it (API ADR 0022).
+        const branchId = useAuthStore.getState().activeBranchId;
+        if (branchId && config.headers) {
+          config.headers[ACTIVE_BRANCH_HEADER] = branchId;
         }
       } catch {
         // Continue request without token if secure storage fails
@@ -101,13 +116,13 @@ export function setupInterceptors(instance: AxiosInstance): void {
             throw new UnauthorizedError('No hay token de refresco disponible');
           }
 
-          const refreshResponse = await axios.post<
-            ApiResponse<RefreshTokenResponseDto> | RefreshTokenResponseDto
-          >(`${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`, { refreshToken });
-
-          const responseData = refreshResponse.data;
-          const tokenData: RefreshTokenResponseDto =
-            'statusCode' in responseData ? responseData.data : responseData;
+          const refreshResponse = await axios.post<unknown>(
+            `${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`,
+            { refreshToken },
+          );
+          // The API wraps it as { success, data }: reading the body as the tokens lost every
+          // session when its access token expired.
+          const tokenData = unwrapApiData<RefreshTokenResponseDto>(refreshResponse.data);
 
           const newAccessToken = tokenData.accessToken;
           const newRefreshToken = tokenData.refreshToken;
@@ -132,7 +147,7 @@ export function setupInterceptors(instance: AxiosInstance): void {
           processQueue(refreshErr, null);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
           await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
-          useAuthStore.getState().clearSession();
+          useAuthStore.getState().clearSession('SESSION_EXPIRED');
           return Promise.reject(
             new UnauthorizedError('Sesión expirada. Por favor inicia sesión nuevamente.'),
           );
@@ -146,6 +161,20 @@ export function setupInterceptors(instance: AxiosInstance): void {
       const body = error.response.data;
       const errorMessage = body?.error?.message || body?.message || error.message;
       const details = body?.error?.details ?? body?.errors;
+
+      // The company was suspended, or the branch the seller works in was taken from them, while
+      // signed in: end the session (every request would fail) and say why on the login screen.
+      const sessionEnd = SESSION_ENDING_CODES[body?.error?.code ?? ''];
+      if (status === 403 && sessionEnd) {
+        await secureStorageAdapter.deleteItem(STORAGE_KEYS.ACCESS_TOKEN);
+        await secureStorageAdapter.deleteItem(STORAGE_KEYS.REFRESH_TOKEN);
+        useAuthStore.getState().clearSession(sessionEnd);
+        return Promise.reject(
+          sessionEnd === 'COMPANY_SUSPENDED'
+            ? new CompanySuspendedError()
+            : new HttpError(errorMessage, status, body?.error?.code),
+        );
+      }
 
       if (status === 404) {
         return Promise.reject(new NotFoundError(errorMessage, details));

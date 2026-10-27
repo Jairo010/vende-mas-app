@@ -16,6 +16,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
+import { useAuthStore } from '@/stores/auth.store';
 import { useThemeColors } from '@/theme';
 
 export interface LoginFormProps {
@@ -28,6 +29,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const activeColors = useThemeColors();
 
   const { loginAsync, isPending, error, reset: resetMutation } = useLogin();
+  // Why the app signed the user out on its own (until they sign in again).
+  const signOutReason = useAuthStore((state) => state.signOutReason);
 
   const rememberedEmail = mmkvStorageAdapter.getString(STORAGE_KEYS.REMEMBERED_EMAIL);
 
@@ -88,6 +91,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               message={error.message || es.auth.errors.unexpected}
               dismissible
               onDismiss={resetMutation}
+            />
+          </View>
+        ) : signOutReason ? (
+          <View className="mb-5">
+            <AlertBanner
+              variant={signOutReason === 'COMPANY_SUSPENDED' ? 'error' : 'warning'}
+              message={es.auth.signOutReasons[signOutReason]}
             />
           </View>
         ) : null}

@@ -6,7 +6,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card } from '@/presentation/components/ui/card';
 import { ListItem } from '@/presentation/components/ui/list-item';
 import { es } from '@/shared/i18n/es';
-import { formatDateTime } from '@/shared/utils/date';
+import { formatVisitSchedule } from '../visits/visit-schedule';
 import { OrderListItem } from '../orders/order-list-item';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from '../visits/visit-visuals';
 
@@ -54,7 +54,7 @@ export function CustomerHistory({
               <ListItem
                 testID={`customer-visit-${visit.id}`}
                 title={VISIT_TYPE_VISUALS[visit.type].label}
-                subtitle={formatDateTime(visit.scheduledAt)}
+                subtitle={formatVisitSchedule(visit)}
                 caption={visit.outcome ? es.visits.outcomes[visit.outcome] : null}
                 trailing={<Badge size="sm" variant={status.badgeVariant} label={status.label} />}
                 onPress={() => onOpenVisit(visit)}

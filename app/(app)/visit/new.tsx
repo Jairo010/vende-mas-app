@@ -20,7 +20,7 @@ import { ScheduleStep } from '@/presentation/features/visits/new-visit/schedule-
 import { VisitTypeStep } from '@/presentation/features/visits/new-visit/visit-type-step';
 import { WizardProgress } from '@/presentation/features/visits/new-visit/wizard-progress';
 import { es } from '@/shared/i18n/es';
-import { addDays, todayKey, toLocalTime, zonedInstant, type DateKey } from '@/shared/utils/date';
+import { todayKey, toLocalTime, zonedInstant, type DateKey } from '@/shared/utils/date';
 
 const STEP_TITLES = [
   es.newVisit.steps.type,
@@ -42,23 +42,25 @@ function parseType(value: string | undefined): VisitType | null {
   return VISIT_TYPES.find((type) => type === value) ?? null;
 }
 
-/** Today: the next full hour; another day (or too late today): tomorrow at 09:00. */
-function initialSchedule(requestedDate: string | undefined): { date: DateKey; time: string } {
+/** The requested day (agenda selection) when it is not in the past; otherwise today. */
+function initialDate(requestedDate: string | undefined): DateKey {
   const today = todayKey();
-  const date =
-    requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate >= today
-      ? requestedDate
-      : today;
-  if (date !== today) return { date, time: DEFAULT_TIME };
+  return requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate >= today
+    ? requestedDate
+    : today;
+}
 
+/** Time offered when the user adds one: today the next full hour, another day 09:00. */
+function suggestedTime(date: DateKey): string {
+  if (date !== todayKey()) return DEFAULT_TIME;
   const nextHour = Number(toLocalTime(new Date()).slice(0, 2)) + 1;
-  if (nextHour > LAST_HOUR_OF_DAY) return { date: addDays(today, 1), time: DEFAULT_TIME };
-  return { date, time: `${String(nextHour).padStart(2, '0')}:00` };
+  if (nextHour > LAST_HOUR_OF_DAY) return DEFAULT_TIME;
+  return `${String(nextHour).padStart(2, '0')}:00`;
 }
 
 /**
  * New visit wizard: type → customer (search, or a prospect created on the spot) → date,
- * time, seller and notes. Also used to schedule the follow-up of a visit.
+ * optional time, seller and notes. Also used to schedule the follow-up of a visit.
  */
 export default function NewVisitScreen() {
   const router = useRouter();
@@ -70,9 +72,9 @@ export default function NewVisitScreen() {
   const [step, setStep] = useState(0);
   const [type, setType] = useState<VisitType | null>(() => parseType(params.type));
   const [selection, setSelection] = useState<CustomerSelection | null>(null);
-  const [schedule] = useState(() => initialSchedule(params.date));
-  const [date, setDate] = useState<DateKey>(schedule.date);
-  const [time, setTime] = useState(schedule.time);
+  const [date, setDate] = useState<DateKey>(() => initialDate(params.date));
+  // No time by default: the visit is planned for the day; the real start/end are recorded.
+  const [time, setTime] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -111,8 +113,13 @@ export default function NewVisitScreen() {
 
   const submit = async () => {
     if (!type || !selection) return;
-    const instant = zonedInstant(date, time);
-    if (instant.getTime() <= Date.now()) {
+    if (time === null && date < todayKey()) {
+      setScheduleError(es.newVisit.pastDayError);
+      return;
+    }
+    // Without a time the visit is stored at the local midnight of its day.
+    const instant = zonedInstant(date, time ?? '00:00');
+    if (time !== null && instant.getTime() <= Date.now()) {
       setScheduleError(es.newVisit.pastDateError);
       return;
     }
@@ -120,6 +127,7 @@ export default function NewVisitScreen() {
     const visit = {
       type,
       scheduledAt: instant.toISOString(),
+      hasScheduledTime: time !== null,
       notes: notes.trim() || undefined,
       sellerId: canAssignSeller ? (sellerId ?? undefined) : undefined,
       parentVisitId: params.parentVisitId,
@@ -188,6 +196,7 @@ export default function NewVisitScreen() {
             <ScheduleStep
               date={date}
               time={time}
+              suggestedTime={suggestedTime(date)}
               notes={notes}
               onChangeDate={(value) => {
                 setDate(value);

@@ -65,6 +65,13 @@ export const es = {
       networkError: 'No se pudo conectar con el servidor. Revisa tu conexión a internet',
       unexpected: 'Ocurrió un error inesperado al iniciar sesión',
     },
+    signOutReasons: {
+      SESSION_EXPIRED: 'Tu sesión expiró. Ingresa de nuevo para seguir trabajando.',
+      COMPANY_SUSPENDED:
+        'La cuenta de tu empresa está suspendida. Comunícate con tu administrador.',
+      BRANCH_REMOVED:
+        'Ya no perteneces a la sucursal en la que trabajabas. Ingresa de nuevo y elige otra.',
+    },
     toasts: {
       loginSuccess: '¡Bienvenido de nuevo!',
       logoutSuccess: 'Sesión cerrada correctamente',
@@ -85,6 +92,7 @@ export const es = {
     dismiss: 'Cerrar',
   },
   roles: {
+    SUPER_ADMIN: 'Plataforma',
     ADMIN: 'Administrador',
     SUPERVISOR: 'Supervisor',
     SELLER: 'Asesor Comercial',
@@ -113,6 +121,14 @@ export const es = {
     inProgressBanner: 'Visita en curso',
     resume: 'Continuar',
     optimalRoute: 'Ver ruta óptima',
+    groups: {
+      OPPORTUNITY: 'Oportunidades',
+      ORDER: 'Pedidos',
+      COLLECTION: 'Cobros',
+    },
+    groupProgress: (done: number, total: number) => `${done} de ${total} hechas`,
+    expandGroup: 'Mostrar visitas',
+    collapseGroup: 'Ocultar visitas',
   },
   route: {
     title: 'Ruta óptima',
@@ -317,6 +333,10 @@ export const es = {
     prospectBadge: 'Nuevo prospecto',
     date: 'Fecha',
     time: 'Hora',
+    timeOptional: 'Hora (opcional)',
+    addTime: 'Agregar hora',
+    removeTime: 'Quitar hora',
+    noTimeHint: 'Sin hora fija: la visita queda para ese día.',
     seller: 'Vendedor asignado',
     me: 'Yo',
     teamUnavailable: 'No se pudo cargar tu equipo. La visita quedará asignada a ti.',
@@ -324,6 +344,7 @@ export const es = {
     notesPlaceholder: 'Objetivo de la visita, qué llevar...',
     submit: 'Agendar visita',
     pastDateError: 'Elige una fecha y hora futuras',
+    pastDayError: 'Elige hoy o una fecha futura',
   },
   customers: {
     title: 'Clientes',
@@ -660,9 +681,33 @@ export const es = {
       PAYMENT: 'Cobro',
     },
   },
+  branch: {
+    chooseTitle: 'Elige tu sucursal',
+    chooseSubtitle: '¿En qué sucursal trabajarás? Puedes cambiarla después desde Más.',
+    switchTitle: 'Cambiar de sucursal',
+    switchSubtitle: 'Lo nuevo que registres irá a la sucursal elegida.',
+    primary: 'Principal',
+    current: 'Actual',
+    continue: 'Continuar',
+    switch: 'Cambiar de sucursal',
+    switched: (name: string) => `Ahora trabajas en ${name}`,
+    otherAccount: 'La sucursal es de otra cuenta',
+    otherAccountHint: 'Si en esa sucursal trabajas con otro usuario',
+    otherAccountTitle: 'Cambiar de cuenta',
+    otherAccountMessage:
+      'Se cerrará tu sesión. Vuelve a iniciar sesión con la cuenta de la otra sucursal.',
+    otherAccountPendingMessage:
+      'Se cerrará tu sesión y tienes cambios sin enviar: se perderán. Sincroniza primero o vuelve a iniciar sesión con la cuenta de la otra sucursal.',
+    otherAccountConfirm: 'Cerrar sesión',
+    pendingTitle: 'Tienes cambios sin enviar',
+    pendingMessage:
+      'Sincroniza antes de cambiar de sucursal, así tus cambios quedan en la sucursal donde los hiciste.',
+    workingIn: (name: string) => `Trabajando en ${name}`,
+  },
   more: {
     title: 'Más',
     profile: 'Perfil',
+    company: 'Empresa',
     appearance: 'Apariencia',
     theme: 'Tema',
     themeLight: 'Claro',

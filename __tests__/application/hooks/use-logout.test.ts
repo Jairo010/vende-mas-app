@@ -1,3 +1,4 @@
+import { IN_TEST_COMPANY } from '../../helpers/session';
 import { renderHook, act } from '@testing-library/react-native';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -36,6 +37,7 @@ describe('useLogout hook', () => {
       name: 'Logged In User',
       role: UserRole.SELLER,
       isActive: true,
+      ...IN_TEST_COMPANY,
     });
     jest.spyOn(secureStorageAdapter, 'deleteItem');
   });

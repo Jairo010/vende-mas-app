@@ -105,6 +105,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     const now = this.ctx.now();
     const nowIso = now.toISOString();
     const scheduledAt = new Date(input.scheduledAt).toISOString();
+    const hasScheduledTime = input.hasScheduledTime ?? true;
     const sellerId = input.sellerId ?? actor.userId;
 
     return this.ctx.db().transaction((tx) => {
@@ -131,6 +132,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           type: input.type,
           status: 'SCHEDULED',
           scheduledAt,
+          hasScheduledTime,
           notes: input.notes ?? null,
           sellerId,
           sellerName: sellerId === actor.userId ? (actor.userName ?? null) : null,
@@ -148,6 +150,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         type: input.type,
         customerId: input.customerId,
         scheduledAt: toZonedIsoString(scheduledAt),
+        hasScheduledTime,
         notes: input.notes,
         sellerId: input.sellerId,
         parentVisitId: input.parentVisitId,
@@ -282,6 +285,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     const now = this.ctx.now();
     const nowIso = now.toISOString();
     const scheduledAt = new Date(input.scheduledAt).toISOString();
+    const hasScheduledTime = input.hasScheduledTime ?? true;
 
     return this.ctx.db().transaction((tx) => {
       const visit = this.loadOrThrow(tx, id);
@@ -290,6 +294,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
       tx.update(visits)
         .set({
           scheduledAt,
+          hasScheduledTime,
           notes: input.notes ?? visit.notes,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
@@ -299,6 +304,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
 
       const payload: RescheduleVisitRequestDto = {
         scheduledAt: toZonedIsoString(scheduledAt),
+        hasScheduledTime,
         notes: input.notes,
       };
       this.enqueue(tx, id, 'RESCHEDULE', compact(payload), now);

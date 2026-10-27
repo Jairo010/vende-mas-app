@@ -1,3 +1,4 @@
+import { CompanyMapper } from '@/application/mappers/company.mapper';
 import type { AxiosInstance } from 'axios';
 import { CatalogMapper } from '@/application/mappers/catalog.mapper';
 import { CollectionMapper } from '@/application/mappers/collection.mapper';
@@ -82,6 +83,7 @@ export class SyncApiService implements ISyncRemotePort {
       receivables: (data.receivables ?? []).map(CollectionMapper.toReceivable),
       payments: (data.payments ?? []).map(CollectionMapper.toPayment),
       settings: CollectionMapper.toSettings(data.settings),
+      company: CompanyMapper.toProfile(data.company),
     };
   }
 

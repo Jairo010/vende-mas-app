@@ -1,11 +1,13 @@
 import { Tabs } from 'expo-router/js-tabs';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import { CalendarDays, Ellipsis, ShoppingCart, Users } from 'lucide-react-native';
 import { es } from '@/shared/i18n/es';
 import { FONT_FAMILY, useThemeColors } from '@/theme';
 
-/** Bottom tabs: faster than a drawer for one-handed use in the field. */
+/** Bottom tabs: faster than a drawer for one-handed use in the field (contracted modules only). */
 export default function TabsLayout() {
   const colors = useThemeColors();
+  const modules = useCompanyModules();
 
   return (
     <Tabs
@@ -35,6 +37,8 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: es.tabs.orders,
+          // Hidden (not just disabled) when the company has no orders module.
+          href: modules.has('ORDERS') ? undefined : null,
           tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
         }}
       />

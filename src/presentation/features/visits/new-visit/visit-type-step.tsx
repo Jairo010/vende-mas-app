@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import * as Haptics from 'expo-haptics';
 import { CircleCheck } from 'lucide-react-native';
 import { VISIT_TYPES, type VisitType } from '@/core/types/visit.types';
@@ -14,10 +15,17 @@ export interface VisitTypeStepProps {
 /** Step 1: opportunity, order or collection. */
 export function VisitTypeStep({ value, onChange }: VisitTypeStepProps) {
   const colors = useThemeColors();
+  const modules = useCompanyModules();
+  // Order and collection visits need their module.
+  const types = VISIT_TYPES.filter(
+    (type) =>
+      (type !== 'ORDER' || modules.has('ORDERS')) &&
+      (type !== 'COLLECTION' || modules.has('COLLECTIONS')),
+  );
 
   return (
     <View className="gap-3" accessibilityRole="radiogroup">
-      {VISIT_TYPES.map((type) => {
+      {types.map((type) => {
         const visual = VISIT_TYPE_VISUALS[type];
         const Icon = visual.icon;
         const selected = value === type;

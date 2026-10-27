@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from 'react-native';
+import { useCompanyModules } from '@/application/hooks/auth/use-company-modules';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MessageCircle, PackageX } from 'lucide-react-native';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
@@ -32,6 +33,7 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useThemeColors();
+  const modules = useCompanyModules();
   const { order, isLoading } = useOrder(id);
   const { customer } = useCustomer(order?.customerId);
   // The order's account receivable shares its id.
@@ -160,7 +162,7 @@ export default function OrderDetailScreen() {
                   {formatCurrency(receivable.balance)}
                 </Text>
               </View>
-              {receivable.isOpen() ? (
+              {receivable.isOpen() && modules.has('COLLECTIONS') ? (
                 <Button
                   testID="order-collect"
                   variant="outline"

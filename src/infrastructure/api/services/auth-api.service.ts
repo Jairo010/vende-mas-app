@@ -15,6 +15,7 @@ import type { ApiResponse } from '@/core/types/api.types';
 import { AuthMapper } from '@/application/mappers/auth.mapper';
 import {
   AccountInactiveError,
+  CompanySuspendedError,
   DomainError,
   InvalidCredentialsError,
   NetworkError,
@@ -56,7 +57,11 @@ export class AuthApiService implements IAuthRepositoryPort {
           throw new InvalidCredentialsError();
         }
         if (status === 403) {
-          throw new AccountInactiveError();
+          const code = (error.response?.data as { error?: { code?: string } } | undefined)?.error
+            ?.code;
+          throw code === 'COMPANY_SUSPENDED'
+            ? new CompanySuspendedError()
+            : new AccountInactiveError();
         }
         if (!error.response) {
           throw new NetworkError(error.message || 'Error de conexión');
@@ -66,6 +71,9 @@ export class AuthApiService implements IAuthRepositoryPort {
       if (error instanceof DomainError) {
         if (error.statusCode === 401 || error.code === 'AUTH_UNAUTHORIZED') {
           throw new InvalidCredentialsError();
+        }
+        if (error.code === 'COMPANY_SUSPENDED') {
+          throw new CompanySuspendedError();
         }
         if (error.statusCode === 403 || error.code === 'AUTH_FORBIDDEN') {
           throw new AccountInactiveError();

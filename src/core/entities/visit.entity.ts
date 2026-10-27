@@ -32,6 +32,8 @@ export interface VisitProps {
   status: VisitStatus;
   outcome: VisitOutcome | null;
   scheduledAt: string;
+  /** false = planned for the local day of `scheduledAt` only (no agreed time). */
+  hasScheduledTime: boolean;
   notes: string | null;
   start: VisitCheckpoint | null;
   end: VisitCheckpoint | null;
@@ -62,6 +64,7 @@ export class VisitEntity {
   public readonly status: VisitStatus;
   public readonly outcome: VisitOutcome | null;
   public readonly scheduledAt: string;
+  public readonly hasScheduledTime: boolean;
   public readonly notes: string | null;
   public readonly start: VisitCheckpoint | null;
   public readonly end: VisitCheckpoint | null;
@@ -86,6 +89,7 @@ export class VisitEntity {
     this.status = props.status;
     this.outcome = props.outcome;
     this.scheduledAt = props.scheduledAt;
+    this.hasScheduledTime = props.hasScheduledTime;
     this.notes = props.notes;
     this.start = props.start;
     this.end = props.end;

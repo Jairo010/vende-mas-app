@@ -1,29 +1,40 @@
 /**
- * Calendar math in the business time zone. The app must never derive "today" from UTC:
- * after 19:00 in Ecuador (UTC-5) the UTC date is already tomorrow.
+ * Calendar math in the business time zone (the company's, see `business-config`). The app
+ * must never derive "today" from UTC: after 19:00 in Ecuador (UTC-5) the UTC date is already
+ * tomorrow.
  *
  * - A `DateKey` is a calendar day in the business zone: `'YYYY-MM-DD'`.
  * - Instants are `Date` objects or ISO strings; the database stores them in UTC.
  * - Payloads to the API carry the local offset: `2026-10-14T09:30:00-05:00`.
  */
-export const APP_TIME_ZONE = 'America/Guayaquil';
-export const APP_LOCALE = 'es-EC';
+import { businessConfig } from '@/shared/config/business-config';
 
 export type DateKey = string;
 
 const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-const partsFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: APP_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
+/** One formatter per zone: building them is costly and the zone rarely changes. */
+const partsFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function partsFormatter(): Intl.DateTimeFormat {
+  const { timeZone } = businessConfig();
+  let formatter = partsFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    });
+    partsFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
 
 interface ZonedParts {
   year: number;
@@ -36,7 +47,7 @@ interface ZonedParts {
 
 function zonedParts(instant: Date): ZonedParts {
   const parts: Record<string, number> = {};
-  for (const part of partsFormatter.formatToParts(instant)) {
+  for (const part of partsFormatter().formatToParts(instant)) {
     if (part.type !== 'literal') parts[part.type] = Number(part.value);
   }
   return {

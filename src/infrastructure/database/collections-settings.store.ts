@@ -20,6 +20,7 @@ export function readCollectionsSettings(db: DbExecutor): CollectionsSettings {
           ? parsed.blockOrdersWhenOverdue
           : DEFAULT_COLLECTIONS_SETTINGS.blockOrdersWhenOverdue,
       overdueGraceDays: Math.max(0, Number(parsed.overdueGraceDays) || 0),
+      receivableOpensOn: parsed.receivableOpensOn === 'INVOICE' ? 'INVOICE' : 'ORDER',
     };
   } catch {
     return DEFAULT_COLLECTIONS_SETTINGS;

@@ -79,13 +79,21 @@ export interface CustomerBalance {
   openReceivables: number;
 }
 
+/**
+ * When an order becomes a debt: when it is taken (ORDER) or when the office registers its
+ * invoice (INVOICE, manual invoicing; the receivable then arrives in a later pull).
+ */
+export type ReceivableOpening = 'ORDER' | 'INVOICE';
+
 /** Credit rules sent by the server in every pull (applied offline too). */
 export interface CollectionsSettings {
   blockOrdersWhenOverdue: boolean;
   overdueGraceDays: number;
+  receivableOpensOn: ReceivableOpening;
 }
 
 export const DEFAULT_COLLECTIONS_SETTINGS: CollectionsSettings = {
   blockOrdersWhenOverdue: true,
   overdueGraceDays: 0,
+  receivableOpensOn: 'ORDER',
 };

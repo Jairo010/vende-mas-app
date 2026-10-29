@@ -22,6 +22,7 @@ export interface CustomerProps {
   storePhotoUrl: string | null;
   storePhotoLocalUri: string | null;
   assignedSellerId: string | null;
+  zoneId: string | null;
   createdById: string | null;
   externalId: string | null;
   billingSyncStatus: BillingSyncStatus;
@@ -49,6 +50,7 @@ export class CustomerEntity {
   public readonly storePhotoUrl: string | null;
   public readonly storePhotoLocalUri: string | null;
   public readonly assignedSellerId: string | null;
+  public readonly zoneId: string | null;
   public readonly createdById: string | null;
   public readonly externalId: string | null;
   public readonly billingSyncStatus: BillingSyncStatus;
@@ -74,6 +76,7 @@ export class CustomerEntity {
     this.storePhotoUrl = props.storePhotoUrl;
     this.storePhotoLocalUri = props.storePhotoLocalUri;
     this.assignedSellerId = props.assignedSellerId;
+    this.zoneId = props.zoneId;
     this.createdById = props.createdById;
     this.externalId = props.externalId;
     this.billingSyncStatus = props.billingSyncStatus;

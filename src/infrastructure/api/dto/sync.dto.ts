@@ -57,6 +57,8 @@ export interface SyncPullResponseDto {
   products: ProductResponseDto[];
   categories: CategoryResponseDto[];
   promotions: PromotionResponseDto[];
+  /** Absent on servers before zones. */
+  zones?: { id: string; name: string; isActive: boolean }[];
   /** Absent on servers without collections. */
   receivables?: ReceivableResponseDto[];
   payments?: CollectionPaymentResponseDto[];

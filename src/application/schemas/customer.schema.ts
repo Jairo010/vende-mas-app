@@ -66,6 +66,11 @@ export const quickProspectSchema = z.object({
     .max(250, messages.tooLong)
     .transform((value) => value || undefined)
     .optional(),
+  /** Zone of the company (optional): the store joins that zone's routes. */
+  zoneId: z
+    .string()
+    .transform((value) => value || undefined)
+    .optional(),
 });
 
 export type QuickProspectFormInput = z.input<typeof quickProspectSchema>;

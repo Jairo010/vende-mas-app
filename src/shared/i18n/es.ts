@@ -326,6 +326,9 @@ export const es = {
       phonePlaceholder: '0991234567',
       addressReference: 'Referencia de dirección',
       addressReferencePlaceholder: 'Frente al parque, junto a la gasolinera...',
+      zone: 'Zona',
+      noZone: 'Sin zona',
+      zoneHint: 'El local entra en las rutas de esa zona.',
     },
     captureLocation: 'Guardar mi ubicación como la del local',
     locationSaved: 'Ubicación del local guardada',
@@ -369,6 +372,7 @@ export const es = {
       email: 'Correo',
       address: 'Dirección',
       reference: 'Referencia',
+      zone: 'Zona',
     },
     identificationTypes: {
       RUC: 'RUC',

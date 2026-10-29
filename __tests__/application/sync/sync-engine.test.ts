@@ -42,6 +42,7 @@ function changes(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     products: [],
     categories: [],
     promotions: [],
+    zones: null,
     receivables: [],
     payments: [],
     settings: null,

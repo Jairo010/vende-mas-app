@@ -13,6 +13,7 @@ import {
   UserX,
 } from 'lucide-react-native';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
+import { useZones } from '@/application/hooks/customers/use-zones';
 import { usePhotoSource } from '@/application/hooks/files/use-photo-source';
 import { useOrders } from '@/application/hooks/orders/use-orders';
 import { useCustomerVisits } from '@/application/hooks/visits/use-customer-visits';
@@ -63,6 +64,7 @@ export default function CustomerDetailScreen() {
   const colors = useThemeColors();
   const modules = useCompanyModules();
   const { customer, isLoading } = useCustomer(id);
+  const { zones } = useZones();
   const { visits } = useCustomerVisits(id);
   const ordersFilter = useMemo(() => ({ customerId: id }), [id]);
   const { orders } = useOrders(ordersFilter);
@@ -219,9 +221,10 @@ export default function CustomerDetailScreen() {
           <DetailRow label={es.customers.fields.phone} value={customer.phone} />
           <DetailRow label={es.customers.fields.email} value={customer.email} />
           <DetailRow label={es.customers.fields.address} value={customer.address} />
+          <DetailRow label={es.customers.fields.reference} value={customer.addressReference} />
           <DetailRow
-            label={es.customers.fields.reference}
-            value={customer.addressReference}
+            label={es.customers.fields.zone}
+            value={zones.find((zone) => zone.id === customer.zoneId)?.name ?? null}
             isLast
           />
         </Card>

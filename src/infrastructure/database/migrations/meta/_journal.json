@@ -22,6 +22,13 @@
       "when": 1793111434183,
       "tag": "0002_visit_optional_time",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793226927548,
+      "tag": "0003_customer_zones",
+      "breakpoints": true
     }
   ]
 }

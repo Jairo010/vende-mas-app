@@ -140,6 +140,7 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
           storePhotoLocalUri: input.storePhotoLocalUri ?? null,
           // Sellers are always assigned to themselves (server rule).
           assignedSellerId: actor.userId,
+          zoneId: input.zoneId ?? null,
           createdById: actor.userId,
           billingSyncStatus: status === 'ACTIVE' ? 'PENDING' : 'NOT_REQUIRED',
           isActive: true,
@@ -167,6 +168,7 @@ export class SqliteCustomerRepository implements ICustomerRepositoryPort {
         addressReference: clean(input.addressReference),
         latitude: input.latitude,
         longitude: input.longitude,
+        zoneId: input.zoneId,
       };
       this.enqueue(tx, id, 'CREATE', compactPayload(payload), now, photoId);
 

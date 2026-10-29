@@ -20,6 +20,7 @@ export function insertCustomer(db: AppDatabase, overrides: Partial<CustomerInser
     longitude: -78.5446,
     storePhotoUrl: '/api/v1/files/photos/store.jpg',
     assignedSellerId: SELLER.userId,
+    zoneId: null,
     billingSyncStatus: 'EXPORTED',
     isActive: true,
     syncStatus: 'SYNCED',

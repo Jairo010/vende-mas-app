@@ -22,6 +22,7 @@ import {
   receivables,
   syncMeta,
   visits,
+  zones,
 } from '../schema';
 import { defaultRepositoryContext, type RepositoryContext } from './repository.context';
 
@@ -104,6 +105,12 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
       tx.delete(promotions).run();
       if (changes.promotions.length > 0) tx.insert(promotions).values(changes.promotions).run();
 
+      // Zones too (older servers send none: the local list is kept).
+      if (changes.zones) {
+        tx.delete(zones).run();
+        if (changes.zones.length > 0) tx.insert(zones).values(changes.zones).run();
+      }
+
       // A receivable with payments not yet accepted keeps its local balance: the server's
       // copy does not include them yet (the seller must not collect twice).
       const withUnsentPayments = new Set(
@@ -176,6 +183,7 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
         products,
         categories,
         promotions,
+        zones,
         outbox,
         pendingPhotos,
         syncMeta,

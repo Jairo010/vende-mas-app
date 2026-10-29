@@ -6,4 +6,5 @@ export const customersKeys = {
   list: (filter: CustomerFilter) => [...customersKeys.lists(), filter] as const,
   details: () => [...customersKeys.all, 'detail'] as const,
   detail: (id: string) => [...customersKeys.details(), id] as const,
+  zones: () => [...customersKeys.all, 'zones'] as const,
 };

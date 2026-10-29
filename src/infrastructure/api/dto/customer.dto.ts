@@ -17,6 +17,8 @@ export interface CustomerResponseDto {
   storePhotoUrl: string | null;
   storePhotoUpdatedAt: string | null;
   assignedSellerId: string | null;
+  /** Absent on servers before zones. */
+  zoneId?: string | null;
   createdById: string | null;
   externalId: string | null;
   billingSyncStatus: string;
@@ -41,6 +43,7 @@ export interface CreateCustomerRequestDto {
   email?: string;
   address?: string;
   addressReference?: string;
+  zoneId?: string;
   latitude?: number;
   longitude?: number;
   storePhotoUrl?: string;

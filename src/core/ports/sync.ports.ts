@@ -7,6 +7,7 @@ import type { ReceivableEntity } from '../entities/receivable.entity';
 import type { VisitEntity } from '../entities/visit.entity';
 import type { CollectionsSettings } from '../types/collection.types';
 import type { Category, Promotion } from '../types/catalog.types';
+import type { Zone } from '../types/customer.types';
 import type {
   OutboxOperation,
   PendingPhoto,
@@ -63,6 +64,8 @@ export interface SyncChangeSet {
   categories: Category[];
   /** Full list of active promotions: replaces the local one. */
   promotions: Promotion[];
+  /** Full list of active zones: replaces the local one (null on servers before zones). */
+  zones: Zone[] | null;
   receivables: ReceivableEntity[];
   payments: PaymentEntity[];
   /** Credit rules (server configuration) applied offline. */

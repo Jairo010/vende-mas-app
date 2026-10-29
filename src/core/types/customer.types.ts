@@ -27,8 +27,16 @@ export interface CreateCustomerInput {
   addressReference?: string;
   latitude?: number;
   longitude?: number;
+  /** Zone of the company the customer belongs to. */
+  zoneId?: string;
   /** Store photo taken on the device; uploaded before the push. */
   storePhotoLocalUri?: string;
+}
+
+/** Area of customers; sellers' weekly routes are planned by zone. */
+export interface Zone {
+  id: string;
+  name: string;
 }
 
 export interface UpdateCustomerInput {

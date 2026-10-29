@@ -145,6 +145,7 @@ export default function NewVisitScreen() {
             contactName: data.contactName,
             phone: data.phone,
             addressReference: data.addressReference,
+            zoneId: data.zoneId,
             latitude: location?.latitude,
             longitude: location?.longitude,
           },

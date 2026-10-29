@@ -33,6 +33,8 @@ export const customers = sqliteTable(
     /** Photo taken offline, shown until the server URL arrives. */
     storePhotoLocalUri: text('store_photo_local_uri'),
     assignedSellerId: text('assigned_seller_id'),
+    /** Zone of the customer (weekly routes are planned by zone). */
+    zoneId: text('zone_id'),
     createdById: text('created_by_id'),
     externalId: text('external_id'),
     billingSyncStatus: text('billing_sync_status').notNull().default('NOT_REQUIRED'),
@@ -119,6 +121,12 @@ export const products = sqliteTable(
     index('products_category_id_idx').on(table.categoryId),
   ],
 );
+
+/** Active zones of the company: every pull brings the full list and replaces this one. */
+export const zones = sqliteTable('zones', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+});
 
 export const promotions = sqliteTable('promotions', {
   id: text('id').primaryKey(),

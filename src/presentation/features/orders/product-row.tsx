@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Plus } from 'lucide-react-native';
 import type { ProductEntity } from '@/core/entities/product.entity';
 import type { AppliedPromotion } from '@/core/value-objects/order-pricing';
@@ -15,16 +16,45 @@ export interface ProductRowProps {
   onChangeQuantity: (quantity: number) => void;
   /** Best promotion for the current (or first) unit, if any. */
   promotion: AppliedPromotion | null;
+  /** Quantity added by one tap (what the customer bought last time); 1 by default. */
+  suggestedQuantity?: number;
+  /** Line about the customer's history ("Llevó 4 la última vez · hace 12 días"). */
+  hint?: string;
+  /** Opens the quick quantity sheet. */
+  onOpenQuantity?: () => void;
 }
 
-/** Catalog line: name, code/brand, price with and without VAT, stock and quantity. */
-export function ProductRow({ product, quantity, onChangeQuantity, promotion }: ProductRowProps) {
+/**
+ * Catalog line: name, code/brand, price with and without VAT, stock and quantity. Tapping it
+ * adds the suggested quantity (or opens the quantity sheet when it is already in the cart);
+ * a long press always opens the sheet.
+ */
+export function ProductRow({
+  product,
+  quantity,
+  onChangeQuantity,
+  promotion,
+  suggestedQuantity = 1,
+  hint,
+  onOpenQuantity,
+}: ProductRowProps) {
   const colors = useThemeColors();
   const overStock = quantity > product.stockQuantity;
+  const add = () => {
+    Haptics.selectionAsync().catch(() => {});
+    onChangeQuantity(suggestedQuantity);
+  };
 
   return (
     <View testID={`product-row-${product.id}`} className="flex-row items-center bg-card px-4 py-3">
-      <View className="mr-3 flex-1">
+      <Pressable
+        testID={`product-row-press-${product.id}`}
+        className="mr-3 flex-1"
+        accessibilityRole="button"
+        accessibilityHint={es.orders.catalog.tapHint}
+        onPress={() => (quantity > 0 ? onOpenQuantity?.() : add())}
+        onLongPress={onOpenQuantity}
+      >
         <Text className="text-sm font-semibold text-foreground" numberOfLines={2}>
           {product.name}
         </Text>
@@ -57,7 +87,12 @@ export function ProductRow({ product, quantity, onChangeQuantity, promotion }: P
             : `${es.orders.catalog.stock}: ${product.stockQuantity}`}
           {overStock && !product.isOutOfStock() ? ` · ${es.orders.cart.overStock}` : ''}
         </Text>
-      </View>
+        {hint ? (
+          <Text className="mt-1 text-xs font-medium text-primary" numberOfLines={1}>
+            {hint}
+          </Text>
+        ) : null}
+      </Pressable>
 
       {quantity > 0 ? (
         <Stepper
@@ -72,9 +107,11 @@ export function ProductRow({ product, quantity, onChangeQuantity, promotion }: P
           size="sm"
           variant="outline"
           leftIcon={<Plus size={14} color={colors.primary} />}
-          onPress={() => onChangeQuantity(1)}
+          onPress={add}
         >
-          {es.orders.catalog.add}
+          {suggestedQuantity > 1
+            ? es.orders.catalog.addQuantity(suggestedQuantity)
+            : es.orders.catalog.add}
         </Button>
       )}
     </View>

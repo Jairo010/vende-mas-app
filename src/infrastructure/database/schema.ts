@@ -33,6 +33,8 @@ export const customers = sqliteTable(
     /** Photo taken offline, shown until the server URL arrives. */
     storePhotoLocalUri: text('store_photo_local_uri'),
     assignedSellerId: text('assigned_seller_id'),
+    /** Zone of the customer (weekly routes are planned by zone). */
+    zoneId: text('zone_id'),
     createdById: text('created_by_id'),
     externalId: text('external_id'),
     billingSyncStatus: text('billing_sync_status').notNull().default('NOT_REQUIRED'),
@@ -113,12 +115,36 @@ export const products = sqliteTable(
     stockQuantity: integer('stock_quantity').notNull(),
     imageUrl: text('image_url'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    /** Normalized words the product is searched by (`buildProductSearchText`, ADR 0012). */
+    searchText: text('search_text'),
   },
   (table) => [
     index('products_name_idx').on(table.name),
     index('products_category_id_idx').on(table.categoryId),
   ],
 );
+
+/** What each customer of the seller usually buys (API ADR 0031), for repeat orders. */
+export const customerProducts = sqliteTable(
+  'customer_products',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id').notNull(),
+    productId: text('product_id').notNull(),
+    purchaseCount: integer('purchase_count').notNull(),
+    totalQuantity: integer('total_quantity').notNull(),
+    lastQuantity: integer('last_quantity').notNull(),
+    lastPurchasedAt: text('last_purchased_at').notNull(),
+    inLastPurchase: integer('in_last_purchase', { mode: 'boolean' }).notNull(),
+  },
+  (table) => [index('customer_products_customer_idx').on(table.customerId)],
+);
+
+/** Active zones of the company: every pull brings the full list and replaces this one. */
+export const zones = sqliteTable('zones', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+});
 
 export const promotions = sqliteTable('promotions', {
   id: text('id').primaryKey(),

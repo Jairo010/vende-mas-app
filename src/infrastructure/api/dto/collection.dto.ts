@@ -74,4 +74,6 @@ export interface RegisterPaymentRequestDto {
 export interface SyncSettingsDto {
   blockOrdersWhenOverdue: boolean;
   overdueGraceDays: number;
+  /** Absent on servers before manual invoicing (ADR 0028 in the API). */
+  receivableOpensOn?: 'ORDER' | 'INVOICE';
 }

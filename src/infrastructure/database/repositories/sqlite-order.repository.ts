@@ -159,37 +159,40 @@ export class SqliteOrderRepository implements IOrderRepositoryPort {
       tx.insert(orderItems).values(lines).run();
 
       // Its account receivable, with the order id (the server creates the same one), so a
-      // down payment can be collected before the order is synced.
-      tx.insert(receivables)
-        .values({
-          id,
-          customerId: customer.id,
-          sellerId: actor.userId,
-          orderId: id,
-          source: 'ORDER',
-          documentNumber: '',
-          planType,
-          issuedAt: nowIso,
-          total: totals.total,
-          status: 'OPEN',
-          syncStatus: 'PENDING',
-          updatedAt: nowIso,
-        })
-        .run();
-      tx.insert(receivableInstallments)
-        .values(
-          buildSchedule(totals.total, planType, installmentsCount, firstDueDate).map(
-            (installment) => ({
-              id: this.ctx.newId(),
-              receivableId: id,
-              number: installment.number,
-              dueDate: installment.dueDate,
-              amount: installment.amount,
-              status: 'PENDING',
-            }),
-          ),
-        )
-        .run();
+      // down payment can be collected before the order is synced. With manual invoicing the
+      // order owes nothing yet: the receivable comes in a pull once the office invoices it.
+      if (readCollectionsSettings(tx).receivableOpensOn === 'ORDER') {
+        tx.insert(receivables)
+          .values({
+            id,
+            customerId: customer.id,
+            sellerId: actor.userId,
+            orderId: id,
+            source: 'ORDER',
+            documentNumber: '',
+            planType,
+            issuedAt: nowIso,
+            total: totals.total,
+            status: 'OPEN',
+            syncStatus: 'PENDING',
+            updatedAt: nowIso,
+          })
+          .run();
+        tx.insert(receivableInstallments)
+          .values(
+            buildSchedule(totals.total, planType, installmentsCount, firstDueDate).map(
+              (installment) => ({
+                id: this.ctx.newId(),
+                receivableId: id,
+                number: installment.number,
+                dueDate: installment.dueDate,
+                amount: installment.amount,
+                status: 'PENDING',
+              }),
+            ),
+          )
+          .run();
+      }
 
       const payload: CreateOrderRequestDto = {
         id,

@@ -31,6 +31,8 @@ export class CustomerMapper {
       storePhotoUrl: dto.storePhotoUrl,
       storePhotoLocalUri: null,
       assignedSellerId: dto.assignedSellerId,
+      // Servers before zones do not send it.
+      zoneId: dto.zoneId ?? null,
       createdById: dto.createdById,
       externalId: dto.externalId,
       billingSyncStatus: pickEnum<BillingSyncStatus>(

@@ -76,6 +76,7 @@ export class CollectionMapper {
     return {
       blockOrdersWhenOverdue: dto.blockOrdersWhenOverdue,
       overdueGraceDays: Math.max(0, Number(dto.overdueGraceDays) || 0),
+      receivableOpensOn: dto.receivableOpensOn === 'INVOICE' ? 'INVOICE' : 'ORDER',
     };
   }
 }

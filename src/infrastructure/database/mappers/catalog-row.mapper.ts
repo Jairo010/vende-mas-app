@@ -1,4 +1,5 @@
 import { ProductEntity } from '@/core/entities/product.entity';
+import { buildProductSearchText } from '@/core/value-objects/product-search';
 import type {
   Category,
   DiscountType,
@@ -13,7 +14,8 @@ export type PromotionRow = typeof promotions.$inferSelect;
 
 export class CatalogRowMapper {
   static toProduct(row: ProductRow): ProductEntity {
-    return ProductEntity.create({ ...row });
+    const { searchText: _searchText, ...props } = row;
+    return ProductEntity.create(props);
   }
 
   static fromProduct(entity: ProductEntity): ProductRow {
@@ -32,6 +34,7 @@ export class CatalogRowMapper {
       stockQuantity: entity.stockQuantity,
       imageUrl: entity.imageUrl,
       isActive: entity.isActive,
+      searchText: buildProductSearchText(entity),
     };
   }
 

@@ -1,5 +1,5 @@
 export interface ProductFilter {
-  /** Matches code, name or brand. */
+  /** Words in any order, matched against code, name, notes, brand and category. */
   search?: string;
   categoryId?: string;
   limit?: number;

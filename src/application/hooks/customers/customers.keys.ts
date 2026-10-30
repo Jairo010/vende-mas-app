@@ -7,4 +7,5 @@ export const customersKeys = {
   details: () => [...customersKeys.all, 'detail'] as const,
   detail: (id: string) => [...customersKeys.details(), id] as const,
   zones: () => [...customersKeys.all, 'zones'] as const,
+  products: (customerId: string) => [...customersKeys.all, 'products', customerId] as const,
 };

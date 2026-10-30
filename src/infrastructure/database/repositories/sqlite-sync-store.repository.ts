@@ -10,6 +10,7 @@ import { VisitRowMapper } from '../mappers/visit-row.mapper';
 import { findEntityIdsWithPendingChanges, type DbExecutor } from '../outbox-writer';
 import {
   categories,
+  customerProducts,
   customers,
   orderItems,
   orders,
@@ -105,6 +106,18 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
       tx.delete(promotions).run();
       if (changes.promotions.length > 0) tx.insert(promotions).values(changes.promotions).run();
 
+      for (const row of changes.customerProducts) {
+        tx.insert(customerProducts)
+          .values(row)
+          .onConflictDoUpdate({ target: customerProducts.id, set: withoutId(row) })
+          .run();
+      }
+      if (changes.removedCustomerProductIds.length > 0) {
+        tx.delete(customerProducts)
+          .where(inArray(customerProducts.id, changes.removedCustomerProductIds))
+          .run();
+      }
+
       // Zones too (older servers send none: the local list is kept).
       if (changes.zones) {
         tx.delete(zones).run();
@@ -184,6 +197,7 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
         categories,
         promotions,
         zones,
+        customerProducts,
         outbox,
         pendingPhotos,
         syncMeta,

@@ -209,6 +209,8 @@ export default function NewOrderScreen() {
             quantities={quantities}
             onChangeQuantity={(product, quantity) => changeQuantity(product.id, quantity)}
             promotions={promotions}
+            customerId={customer?.id}
+            customerName={customer?.tradeName}
             bottomInset={FOOTER_INSET}
           />
           <StickyFooter>

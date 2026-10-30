@@ -3,7 +3,7 @@ import { SqliteSyncStoreRepository } from '@/infrastructure/database/repositorie
 import { SqliteVisitRepository } from '@/infrastructure/database/repositories/sqlite-visit.repository';
 import { SqliteCatalogRepository } from '@/infrastructure/database/repositories/sqlite-catalog.repository';
 import { SqliteOrderRepository } from '@/infrastructure/database/repositories/sqlite-order.repository';
-import { customers, outbox, visits } from '@/infrastructure/database/schema';
+import { customerProducts, customers, outbox, visits } from '@/infrastructure/database/schema';
 import type { AppDatabase } from '@/infrastructure/database/database.types';
 import type { SyncChangeSet } from '@/core/ports/sync.ports';
 import { CustomerEntity, type CustomerProps } from '@/core/entities/customer.entity';
@@ -28,6 +28,8 @@ function emptyChanges(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     zones: null,
     receivables: [],
     payments: [],
+    customerProducts: [],
+    removedCustomerProductIds: [],
     settings: null,
     company: null,
     ...overrides,
@@ -250,6 +252,35 @@ describe('SqliteSyncStoreRepository', () => {
     const [saved] = await new SqliteOrderRepository(ctx).findAll();
     expect(saved.orderNumber).toBe('ORD-000123');
     expect(saved.items).toHaveLength(1);
+  });
+
+  it('stores what each customer buys and drops the rows the server removed', async () => {
+    const stat = {
+      customerId: 'customer-1',
+      productId: 'product-1',
+      purchaseCount: 5,
+      totalQuantity: 20,
+      lastQuantity: 4,
+      lastPurchasedAt: '2026-10-20T05:00:00.000Z',
+      inLastPurchase: true,
+    };
+    await store.applyPull(
+      emptyChanges({
+        customerProducts: [
+          { id: 'cp-1', ...stat },
+          { id: 'cp-2', ...stat, productId: 'product-2', inLastPurchase: false },
+        ],
+      }),
+    );
+    await store.applyPull(
+      emptyChanges({
+        customerProducts: [{ id: 'cp-1', ...stat, lastQuantity: 6 }],
+        removedCustomerProductIds: ['cp-2'],
+      }),
+    );
+
+    const rows = db.select().from(customerProducts).all();
+    expect(rows).toEqual([{ id: 'cp-1', ...stat, lastQuantity: 6 }]);
   });
 
   it('keeps the cursor and last sync time, and wipes everything on clearAll', async () => {

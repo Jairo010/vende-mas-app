@@ -468,16 +468,39 @@ export const es = {
     chooseCustomer: '¿Para qué cliente es el pedido?',
     onlyActive: 'Solo los clientes activos (con datos de facturación) reciben pedidos.',
     catalog: {
-      searchPlaceholder: 'Buscar por nombre, código o marca...',
-      allCategories: 'Todas',
+      searchPlaceholder: 'Ej.: pastillas spark, aceite total 20w50…',
       emptyTitle: 'Catálogo vacío',
       emptyDescription: 'Sincroniza con conexión para descargar los productos.',
       noMatches: 'Ningún producto coincide con la búsqueda.',
       add: 'Agregar',
+      addQuantity: (quantity: number) => `Agregar ${quantity}`,
+      tapHint: 'Toca para agregar; mantén presionado para elegir la cantidad',
+      allProducts: 'Todo el catálogo',
+      history: {
+        title: (customer?: string) =>
+          customer ? `Lo que compra ${customer}` : 'Lo que compra este cliente',
+        hint: (quantity: number, days: number) =>
+          `Llevó ${quantity} la última vez · ${
+            days === 0 ? 'hoy' : days === 1 ? 'ayer' : `hace ${days} días`
+          }`,
+        repeat: (count: number) =>
+          count === 1
+            ? 'Repetir última compra (1 producto)'
+            : `Repetir última compra (${count} productos)`,
+        repeated: (count: number) =>
+          count === 1 ? '1 producto agregado al pedido' : `${count} productos agregados al pedido`,
+      },
       stock: 'Stock',
       outOfStock: 'Sin stock',
       withTax: 'con IVA',
       promotion: 'Promo',
+    },
+    quantity: {
+      title: 'Cantidad',
+      suggested: (quantity: number) => `${quantity} (como la última vez)`,
+      other: 'Otra cantidad',
+      confirm: 'Listo',
+      remove: 'Quitar del pedido',
     },
     cart: {
       review: 'Revisar pedido',

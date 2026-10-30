@@ -62,6 +62,8 @@ export interface SyncPullResponseDto {
   /** Absent on servers without collections. */
   receivables?: ReceivableResponseDto[];
   payments?: CollectionPaymentResponseDto[];
+  /** Absent on servers before purchase history (API ADR 0031). */
+  customerProducts?: CustomerProductDto[];
   settings?: SyncSettingsDto;
   /** Absent on servers before multi-tenancy. */
   company?: CompanyProfileDto;
@@ -74,4 +76,19 @@ export interface UploadPhotoResponseDto {
   mimeType: string;
   sizeBytes: number;
   alreadyExisted: boolean;
+}
+
+/** `customerProducts` of the pull: what a customer usually buys. */
+export interface CustomerProductDto {
+  id: string;
+  customerId: string;
+  productId: string;
+  purchaseCount: number;
+  totalQuantity: number;
+  lastQuantity: number;
+  lastPurchasedAt: string;
+  inLastPurchase: boolean;
+  /** false: drop it from the device. */
+  isActive: boolean;
+  updatedAt: string;
 }

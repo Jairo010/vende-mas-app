@@ -115,11 +115,29 @@ export const products = sqliteTable(
     stockQuantity: integer('stock_quantity').notNull(),
     imageUrl: text('image_url'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    /** Normalized words the product is searched by (`buildProductSearchText`, ADR 0012). */
+    searchText: text('search_text'),
   },
   (table) => [
     index('products_name_idx').on(table.name),
     index('products_category_id_idx').on(table.categoryId),
   ],
+);
+
+/** What each customer of the seller usually buys (API ADR 0031), for repeat orders. */
+export const customerProducts = sqliteTable(
+  'customer_products',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id').notNull(),
+    productId: text('product_id').notNull(),
+    purchaseCount: integer('purchase_count').notNull(),
+    totalQuantity: integer('total_quantity').notNull(),
+    lastQuantity: integer('last_quantity').notNull(),
+    lastPurchasedAt: text('last_purchased_at').notNull(),
+    inLastPurchase: integer('in_last_purchase', { mode: 'boolean' }).notNull(),
+  },
+  (table) => [index('customer_products_customer_idx').on(table.customerId)],
 );
 
 /** Active zones of the company: every pull brings the full list and replaces this one. */

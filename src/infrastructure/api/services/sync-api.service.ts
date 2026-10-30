@@ -85,6 +85,12 @@ export class SyncApiService implements ISyncRemotePort {
         : null,
       receivables: (data.receivables ?? []).map(CollectionMapper.toReceivable),
       payments: (data.payments ?? []).map(CollectionMapper.toPayment),
+      customerProducts: (data.customerProducts ?? [])
+        .filter((row) => row.isActive)
+        .map(({ isActive: _isActive, updatedAt: _updatedAt, ...row }) => row),
+      removedCustomerProductIds: (data.customerProducts ?? [])
+        .filter((row) => !row.isActive)
+        .map((row) => row.id),
       settings: CollectionMapper.toSettings(data.settings),
       company: CompanyMapper.toProfile(data.company),
     };

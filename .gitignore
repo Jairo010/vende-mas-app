@@ -43,3 +43,6 @@ example
 /ios
 /android
 
+
+# graphify code graph (local)
+graphify-out/

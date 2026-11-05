@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleCheck, Crosshair } from 'lucide-react-native';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
-import { useZones } from '@/application/hooks/customers/use-zones';
 import { useCurrentLocation } from '@/application/hooks/device/use-current-location';
 import {
   quickProspectSchema,
@@ -14,7 +13,6 @@ import {
 import type { GeoPoint } from '@/core/types/geo.types';
 import { notify } from '@/presentation/components/feedback/toast';
 import { Button } from '@/presentation/components/ui/button';
-import { Chip } from '@/presentation/components/ui/chip';
 import { Input } from '@/presentation/components/ui/input';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
@@ -40,7 +38,6 @@ export function QuickProspectForm({ initialValue, onSubmit, onCancel }: QuickPro
   const [location, setLocation] = useState<GeoPoint | null>(initialValue?.location ?? null);
   const { capture, isCapturing } = useCurrentLocation();
   const { canSeeLocationTracking } = useAuthSession();
-  const { zones } = useZones();
 
   const {
     control,
@@ -53,7 +50,6 @@ export function QuickProspectForm({ initialValue, onSubmit, onCancel }: QuickPro
       contactName: initialValue?.data.contactName ?? '',
       phone: initialValue?.data.phone ?? '',
       addressReference: initialValue?.data.addressReference ?? '',
-      zoneId: initialValue?.data.zoneId ?? '',
     },
     mode: 'onTouched',
   });
@@ -133,43 +129,6 @@ export function QuickProspectForm({ initialValue, onSubmit, onCancel }: QuickPro
           />
         )}
       />
-
-      {zones.length > 0 ? (
-        <Controller
-          control={control}
-          name="zoneId"
-          render={({ field: { value, onChange } }) => (
-            <View className="gap-2">
-              <Text className="text-sm font-medium text-foreground">
-                {`${f.zone} (${es.common.optional.toLowerCase()})`}
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                <Chip
-                  testID="prospect-zone-none"
-                  label={f.noZone}
-                  selected={!value}
-                  onPress={() => onChange('')}
-                />
-                {zones.map((zone) => (
-                  <Chip
-                    key={zone.id}
-                    testID={`prospect-zone-${zone.id}`}
-                    label={zone.name}
-                    selected={value === zone.id}
-                    onPress={() => onChange(zone.id)}
-                  />
-                ))}
-              </ScrollView>
-              <Text className="text-xs text-muted-foreground">{f.zoneHint}</Text>
-            </View>
-          )}
-        />
-      ) : null}
 
       {canSeeLocationTracking ? (
         <Button

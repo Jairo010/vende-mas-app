@@ -43,7 +43,6 @@ export interface CreateCustomerRequestDto {
   email?: string;
   address?: string;
   addressReference?: string;
-  zoneId?: string;
   latitude?: number;
   longitude?: number;
   storePhotoUrl?: string;

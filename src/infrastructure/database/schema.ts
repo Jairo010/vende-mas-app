@@ -73,6 +73,7 @@ export const visits = sqliteTable(
     photoUrl: text('photo_url'),
     photoLocalUri: text('photo_local_uri'),
     cancellationReason: text('cancellation_reason'),
+    failureReason: text('failure_reason'),
     sellerId: text('seller_id').notNull(),
     sellerName: text('seller_name'),
     createdById: text('created_by_id').notNull(),

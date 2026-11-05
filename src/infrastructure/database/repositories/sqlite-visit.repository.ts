@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
-import type { VisitEntity } from '@/core/entities/visit.entity';
+import { VisitEntity } from '@/core/entities/visit.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
 import {
   VisitAlreadyInProgressError,
@@ -238,6 +238,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
       if (visit.needsStorePhoto(customerHasPhoto) && !input.photoLocalUri) {
         throw new VisitStorePhotoRequiredError();
       }
+      VisitEntity.assertCompletionDetails(input.outcome, input.notes, input.failureReason);
 
       const durationMinutes = visit.start
         ? Math.max(0, Math.round((now.getTime() - new Date(visit.start.at).getTime()) / 60_000))
@@ -252,7 +253,8 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           endLongitude: input.location?.longitude ?? null,
           endAccuracyMeters: input.location?.accuracyMeters ?? null,
           durationMinutes,
-          notes: input.notes ?? visit.notes,
+          notes: input.notes,
+          failureReason: input.failureReason ?? null,
           photoLocalUri: input.photoLocalUri ?? null,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
@@ -274,6 +276,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         endedAt: toZonedIsoString(now),
         location: toLocationDto(input.location),
         notes: input.notes,
+        failureReason: input.failureReason,
       };
       this.enqueue(tx, id, 'COMPLETE', compact(payload), now, photoId);
 
@@ -320,11 +323,13 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     return this.ctx.db().transaction((tx) => {
       const visit = this.loadOrThrow(tx, id);
       visit.assertCanCancel();
+      VisitEntity.assertCancellationDetails(input.failureReason, input.reason);
 
       tx.update(visits)
         .set({
           status: 'CANCELLED',
-          cancellationReason: input.reason ?? null,
+          cancellationReason: input.reason,
+          failureReason: input.failureReason,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
         })
@@ -332,6 +337,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         .run();
 
       const payload: CancelVisitRequestDto = {
+        failureReason: input.failureReason,
         reason: input.reason,
         cancelledAt: toZonedIsoString(now),
       };

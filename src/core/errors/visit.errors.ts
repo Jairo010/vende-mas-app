@@ -38,6 +38,30 @@ export class VisitStorePhotoRequiredError extends DomainError {
   }
 }
 
+export class VisitNotesRequiredError extends DomainError {
+  public readonly code = 'VISIT_NOTES_REQUIRED';
+
+  constructor(minLength: number) {
+    super(`Escribe las notas de la visita (mínimo ${minLength} caracteres)`, 422, { minLength });
+  }
+}
+
+export class VisitFailureReasonRequiredError extends DomainError {
+  public readonly code = 'VISIT_FAILURE_REASON_REQUIRED';
+
+  constructor(allowed: readonly string[]) {
+    super('Elige el motivo por el que no se logró la visita', 422, { allowed });
+  }
+}
+
+export class VisitInvalidFailureReasonError extends DomainError {
+  public readonly code = 'VISIT_INVALID_FAILURE_REASON';
+
+  constructor(reason: string, allowed: readonly string[]) {
+    super(`El motivo ${reason} no aplica aquí`, 422, { reason, allowed });
+  }
+}
+
 export class VisitAlreadyInProgressError extends DomainError {
   public readonly code = 'VISIT_ALREADY_IN_PROGRESS';
 

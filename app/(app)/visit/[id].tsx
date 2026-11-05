@@ -21,7 +21,12 @@ import { useVisit } from '@/application/hooks/visits/use-visit';
 import { useVisitInProgress } from '@/application/hooks/visits/use-visit-in-progress';
 import { VisitEntity } from '@/core/entities/visit.entity';
 import { VisitAlreadyInProgressError } from '@/core/errors/visit.errors';
-import type { VisitOutcome, VisitType } from '@/core/types/visit.types';
+import {
+  hasValidVisitNotes,
+  type VisitFailureReason,
+  type VisitOutcome,
+  type VisitType,
+} from '@/core/types/visit.types';
 import { DetailRow } from '@/presentation/components/common/detail-row';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
@@ -71,7 +76,8 @@ export default function VisitScreen() {
   const { orders } = useOrders(ordersFilter);
 
   const storedDraft = useVisitDraftStore((state) => (id ? state.drafts[id] : undefined));
-  const draft = storedDraft ?? EMPTY_VISIT_DRAFT;
+  // Merged over the empty one: a draft saved by an older version lacks the newer fields.
+  const draft = { ...EMPTY_VISIT_DRAFT, ...storedDraft };
   const updateDraft = useVisitDraftStore((state) => state.updateDraft);
   const clearDraft = useVisitDraftStore((state) => state.clearDraft);
 
@@ -121,6 +127,11 @@ export default function VisitScreen() {
   if (!draft.outcome) errors.outcome = es.visits.validation.outcomeRequired;
   if (visit.type === 'OPPORTUNITY' && photoRequired && !draft.photoUri) {
     errors.photo = es.visits.validation.photoRequired;
+  }
+  if (!hasValidVisitNotes(draft.notes)) errors.notes = es.visits.validation.notesRequired;
+  const failureReasons = draft.outcome ? VisitEntity.failureReasonsFor(draft.outcome) : null;
+  if (failureReasons && !draft.failureReason) {
+    errors.failureReason = es.visits.validation.reasonRequired;
   }
   const billingMissing =
     draft.outcome !== null &&
@@ -175,7 +186,11 @@ export default function VisitScreen() {
 
   const finish = async () => {
     setShowErrors(true);
-    if (!draft.outcome || errors.photo) return;
+    if (!draft.outcome || errors.photo || errors.notes || errors.failureReason) {
+      // The field at fault may be out of view: the footer button is far from them.
+      notify.warning(es.visits.validation.incomplete);
+      return;
+    }
     if (billingMissing) {
       notify.warning(es.visits.validation.billingRequired);
       return;
@@ -183,7 +198,8 @@ export default function VisitScreen() {
     try {
       const { reading } = await checkOut(visit.id, {
         outcome: draft.outcome,
-        notes: draft.notes.trim() || undefined,
+        notes: draft.notes.trim(),
+        failureReason: draft.failureReason ?? undefined,
         photoLocalUri: draft.photoUri ?? undefined,
       });
       clearDraft(visit.id);
@@ -217,9 +233,9 @@ export default function VisitScreen() {
     }
   };
 
-  const cancel = async (reason: string | undefined) => {
+  const cancel = async (failureReason: VisitFailureReason, notes: string) => {
     try {
-      await cancelVisit({ id: visit.id, reason });
+      await cancelVisit({ id: visit.id, failureReason, reason: notes });
       if (draft.photoUri) photo.discard(draft.photoUri);
       clearDraft(visit.id);
       setOpenSheet(null);
@@ -319,7 +335,16 @@ export default function VisitScreen() {
               orders={orders}
               errors={showErrors ? errors : {}}
               isCapturingPhoto={photo.isCapturing}
-              onChangeOutcome={(outcome: VisitOutcome) => updateDraft(visit.id, { outcome })}
+              onChangeOutcome={(outcome: VisitOutcome) => {
+                // A reason chosen for another outcome may not apply to this one.
+                const allowed = VisitEntity.failureReasonsFor(outcome);
+                const kept =
+                  draft.failureReason && allowed?.includes(draft.failureReason)
+                    ? draft.failureReason
+                    : null;
+                updateDraft(visit.id, { outcome, failureReason: kept });
+              }}
+              onChangeFailureReason={(failureReason) => updateDraft(visit.id, { failureReason })}
               onChangeNotes={(notes) => updateDraft(visit.id, { notes })}
               onTakePhoto={() => void takePhoto()}
               onCompleteBilling={openBilling}
@@ -344,6 +369,12 @@ export default function VisitScreen() {
                 label={es.visits.fields.outcome}
                 value={visit.outcome ? es.visits.outcomes[visit.outcome] : null}
               />
+              {visit.failureReason ? (
+                <DetailRow
+                  label={es.visits.fields.failureReason}
+                  value={es.visits.failureReasons[visit.failureReason]}
+                />
+              ) : null}
               <DetailRow label={es.visits.fields.notes} value={visit.notes} isLast />
             </Card>
           ) : null}
@@ -357,8 +388,13 @@ export default function VisitScreen() {
               variant="warning"
               title={es.visits.statuses.CANCELLED}
               message={
-                visit.cancellationReason
-                  ? `${es.visits.fields.cancellationReason}: ${visit.cancellationReason}`
+                visit.failureReason || visit.cancellationReason
+                  ? `${es.visits.fields.cancellationReason}: ${[
+                      visit.failureReason && es.visits.failureReasons[visit.failureReason],
+                      visit.cancellationReason,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}`
                   : es.visits.toasts.cancelled
               }
             />

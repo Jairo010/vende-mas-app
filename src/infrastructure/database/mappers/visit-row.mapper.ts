@@ -3,6 +3,7 @@ import type { GeoPoint } from '@/core/types/geo.types';
 import type {
   LocalSyncStatus,
   VisitCheckpoint,
+  VisitFailureReason,
   VisitOutcome,
   VisitStatus,
   VisitType,
@@ -64,6 +65,7 @@ export class VisitRowMapper {
       photoUrl: row.photoUrl,
       photoLocalUri: row.photoLocalUri,
       cancellationReason: row.cancellationReason,
+      failureReason: row.failureReason as VisitFailureReason | null,
       sellerId: row.sellerId,
       sellerName: row.sellerName,
       createdById: row.createdById,
@@ -98,6 +100,7 @@ export class VisitRowMapper {
       durationMinutes: entity.durationMinutes,
       photoUrl: entity.photoUrl,
       cancellationReason: entity.cancellationReason,
+      failureReason: entity.failureReason,
       sellerId: entity.sellerId,
       sellerName: entity.sellerName,
       createdById: entity.createdById,

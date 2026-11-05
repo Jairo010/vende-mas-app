@@ -7,6 +7,9 @@ import {
   VisitInvalidTransitionError,
   VisitOutcomeNotAllowedError,
   VisitStorePhotoRequiredError,
+  VisitFailureReasonRequiredError,
+  VisitInvalidFailureReasonError,
+  VisitNotesRequiredError,
 } from '@/core/errors/visit.errors';
 import { createTestContext, createTestDatabase } from '../../helpers/test-database';
 import { insertCustomer, SELLER } from '../../helpers/fixtures';
@@ -135,13 +138,13 @@ describe('SqliteVisitRepository', () => {
       SELLER,
     );
 
-    await expect(repository.complete(visit.id, { outcome: 'ORDER_TAKEN' })).rejects.toBeInstanceOf(
-      VisitInvalidTransitionError,
-    );
+    await expect(
+      repository.complete(visit.id, { outcome: 'ORDER_TAKEN', notes: 'Sin novedad' }),
+    ).rejects.toBeInstanceOf(VisitInvalidTransitionError);
     await repository.start(visit.id, {});
-    await expect(repository.complete(visit.id, { outcome: 'COLLECTED' })).rejects.toBeInstanceOf(
-      VisitOutcomeNotAllowedError,
-    );
+    await expect(
+      repository.complete(visit.id, { outcome: 'COLLECTED', notes: 'Sin novedad' }),
+    ).rejects.toBeInstanceOf(VisitOutcomeNotAllowedError);
     await expect(
       repository.reschedule(visit.id, { scheduledAt: '2026-10-20T15:00:00Z' }),
     ).rejects.toBeInstanceOf(VisitInvalidTransitionError);
@@ -157,12 +160,13 @@ describe('SqliteVisitRepository', () => {
     );
     await repository.start(visit.id, {});
 
-    await expect(repository.complete(visit.id, { outcome: 'INTERESTED' })).rejects.toBeInstanceOf(
-      VisitStorePhotoRequiredError,
-    );
+    await expect(
+      repository.complete(visit.id, { outcome: 'INTERESTED', notes: 'Sin novedad' }),
+    ).rejects.toBeInstanceOf(VisitStorePhotoRequiredError);
 
     const completed = await repository.complete(visit.id, {
       outcome: 'INTERESTED',
+      notes: 'Sin novedad',
       photoLocalUri: 'file:///documents/pending-photos/p.jpg',
     });
     expect(completed.photoLocalUri).toBe('file:///documents/pending-photos/p.jpg');
@@ -186,13 +190,76 @@ describe('SqliteVisitRepository', () => {
     );
     await repository.reschedule(visit.id, { scheduledAt: '2026-10-16T15:00:00.000Z' });
     await repository.reschedule(visit.id, { scheduledAt: '2026-10-17T15:00:00.000Z' });
-    const cancelled = await repository.cancel(visit.id, { reason: 'Local cerrado' });
+    const cancelled = await repository.cancel(visit.id, {
+      failureReason: 'STORE_CLOSED',
+      reason: 'Local cerrado',
+    });
 
     expect(cancelled.status).toBe('CANCELLED');
     expect(cancelled.cancellationReason).toBe('Local cerrado');
+    expect(cancelled.failureReason).toBe('STORE_CLOSED');
+    expect(outboxRows().at(-1)?.payload).toMatchObject({
+      failureReason: 'STORE_CLOSED',
+      reason: 'Local cerrado',
+    });
     const keys = outboxRows().map((row) => row.idempotencyKey);
     expect(new Set(keys).size).toBe(keys.length);
     expect(keys[3]).toBe(`visit-cancel-${visit.id}`);
+  });
+
+  it('requires notes and the reason to close a visit, and queues the reason', async () => {
+    const visit = await repository.schedule(
+      { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },
+      SELLER,
+    );
+    await repository.start(visit.id, {});
+
+    await expect(
+      repository.complete(visit.id, { outcome: 'NO_ORDER', notes: 'Sin novedad' }),
+    ).rejects.toBeInstanceOf(VisitFailureReasonRequiredError);
+    await expect(
+      repository.complete(visit.id, {
+        outcome: 'NO_ORDER',
+        notes: 'Sin novedad',
+        failureReason: 'NO_FUNDS',
+      }),
+    ).rejects.toBeInstanceOf(VisitInvalidFailureReasonError);
+    await expect(
+      repository.complete(visit.id, {
+        outcome: 'NO_ORDER',
+        notes: ' ok ',
+        failureReason: 'HAS_STOCK',
+      }),
+    ).rejects.toBeInstanceOf(VisitNotesRequiredError);
+    expect(outboxRows().map((row) => row.action)).toEqual(['SCHEDULE', 'START']);
+
+    const completed = await repository.complete(visit.id, {
+      outcome: 'NO_ORDER',
+      notes: 'Tiene mercadería',
+      failureReason: 'HAS_STOCK',
+    });
+
+    expect(completed.failureReason).toBe('HAS_STOCK');
+    expect(outboxRows().at(-1)?.payload).toMatchObject({
+      outcome: 'NO_ORDER',
+      notes: 'Tiene mercadería',
+      failureReason: 'HAS_STOCK',
+    });
+  });
+
+  it('refuses a cancellation without reason or notes', async () => {
+    const visit = await repository.schedule(
+      { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },
+      SELLER,
+    );
+
+    await expect(
+      repository.cancel(visit.id, { failureReason: 'HAS_STOCK', reason: 'Sin novedad' }),
+    ).rejects.toBeInstanceOf(VisitInvalidFailureReasonError);
+    await expect(
+      repository.cancel(visit.id, { failureReason: 'STORE_CLOSED', reason: '' }),
+    ).rejects.toBeInstanceOf(VisitNotesRequiredError);
+    expect(outboxRows().map((row) => row.action)).toEqual(['SCHEDULE']);
   });
 
   it('finds visits by range ordered by time and the one in progress', async () => {

@@ -53,6 +53,12 @@ stop, a store that moved, or "Recalcular".
   rejected ones. A route visit already on the target day is merged by the server and disappears
   from the phone on the next sync.
 
+### Collection visits can also sell
+
+A route visit is a collection whenever the customer owes (API ADR 0030), and that customer may also
+want to buy. A collection visit shows the order card as well, so the seller makes one stop for both
+jobs. An order alone makes the visit a success in the results, whatever outcome is closed with.
+
 ## Consequences
 
 - An order slightly less optimal after a change of plans, in exchange for not paying for it.

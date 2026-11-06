@@ -86,20 +86,21 @@ export function VisitWorkPanel({
         </Card>
       ) : null}
 
-      {visit.type === 'ORDER' ? (
-        <VisitOrdersCard
-          orders={orders}
-          onTakeOrder={onTakeOrder}
-          description={es.visits.order.description}
-        />
-      ) : null}
-
       {visit.type === 'COLLECTION' ? (
         <CollectionPanel
           customerId={visit.customerId}
           visitId={visit.id}
           onCollect={onCollect}
           onOpenPayment={onOpenPayment}
+        />
+      ) : null}
+
+      {/* A collection is also a chance to sell: one stop for both jobs. */}
+      {visit.type === 'ORDER' || visit.type === 'COLLECTION' ? (
+        <VisitOrdersCard
+          orders={orders}
+          onTakeOrder={onTakeOrder}
+          description={es.visits.order.description}
         />
       ) : null}
 

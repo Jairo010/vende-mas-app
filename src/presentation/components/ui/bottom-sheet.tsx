@@ -36,11 +36,23 @@ export function BottomSheet({
   const ref = useRef<BottomSheetModal>(null);
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const isPresented = useRef(false);
 
   useEffect(() => {
-    if (open) ref.current?.present();
-    else ref.current?.dismiss();
+    if (open) {
+      isPresented.current = true;
+      ref.current?.present();
+    } else if (isPresented.current) {
+      // Only a presented sheet: the library leaves any other one marked as dismissing, and a sheet
+      // marked that way silently refuses to render when it is presented later.
+      ref.current?.dismiss();
+    }
   }, [open]);
+
+  const handleDismiss = useCallback(() => {
+    isPresented.current = false;
+    onClose();
+  }, [onClose]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -60,7 +72,7 @@ export function BottomSheet({
       ref={ref}
       snapPoints={snapPoints}
       enableDynamicSizing={!snapPoints}
-      onDismiss={onClose}
+      onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={{ backgroundColor: colors.card }}
       handleIndicatorStyle={{ backgroundColor: colors.mutedForeground, width: 40 }}

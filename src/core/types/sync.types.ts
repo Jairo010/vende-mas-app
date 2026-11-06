@@ -2,7 +2,15 @@ export const SYNC_ENTITY_TYPES = ['CUSTOMER', 'VISIT', 'ORDER', 'PAYMENT'] as co
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];
 
 export type SyncAction =
-  'CREATE' | 'UPDATE' | 'PROMOTE' | 'SCHEDULE' | 'START' | 'COMPLETE' | 'RESCHEDULE' | 'CANCEL';
+  | 'CREATE'
+  | 'UPDATE'
+  | 'PROMOTE'
+  | 'SCHEDULE'
+  | 'START'
+  | 'COMPLETE'
+  | 'RESCHEDULE'
+  | 'CANCEL'
+  | 'POSTPONE';
 
 /** Server verdict for each pushed operation (see docs/sync-protocol.md in the API). */
 export type SyncResultStatus = 'APPLIED' | 'DUPLICATE' | 'REJECTED' | 'RETRY' | 'SKIPPED';

@@ -7,6 +7,7 @@ import m0002 from './0002_visit_optional_time.sql';
 import m0003 from './0003_customer_zones.sql';
 import m0004 from './0004_order_taking.sql';
 import m0005 from './0005_visit_failure_reason.sql';
+import m0006 from './0006_visit_postpone.sql';
 
   export default {
     journal,
@@ -16,7 +17,8 @@ m0001,
 m0002,
 m0003,
 m0004,
-m0005
+m0005,
+m0006
     }
   }
   

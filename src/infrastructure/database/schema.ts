@@ -74,6 +74,8 @@ export const visits = sqliteTable(
     photoLocalUri: text('photo_local_uri'),
     cancellationReason: text('cancellation_reason'),
     failureReason: text('failure_reason'),
+    postponedAt: text('postponed_at'),
+    postponedUntil: text('postponed_until'),
     sellerId: text('seller_id').notNull(),
     sellerName: text('seller_name'),
     createdById: text('created_by_id').notNull(),

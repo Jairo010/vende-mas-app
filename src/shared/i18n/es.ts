@@ -238,6 +238,7 @@ export const es = {
       finish: 'Finalizar visita',
       reschedule: 'Reprogramar',
       cancel: 'Cancelar visita',
+      postpone: 'Cliente ocupado: volver más tarde',
       scheduleNext: 'Agendar próxima visita',
       takeOrder: 'Armar pedido',
       completeBilling: 'Completar datos de facturación',
@@ -302,6 +303,15 @@ export const es = {
       title: 'Reprogramar visita',
       confirm: 'Reprogramar',
     },
+    postpone: {
+      title: 'Volver más tarde',
+      description:
+        'La visita pasa al final de tu ruta de hoy y las demás siguen igual. Cuenta qué te dijo el cliente.',
+      notesPlaceholder: 'Qué te dijo el cliente (obligatorio)',
+      confirm: 'Dejar para más tarde',
+      badge: 'Volver más tarde',
+      badgeAt: (time: string) => `Volver más tarde · ${time}`,
+    },
     cancel: {
       title: 'Cancelar visita',
       description: 'La visita quedará cancelada. Elige el motivo y cuenta qué pasó.',
@@ -314,6 +324,7 @@ export const es = {
       completed: 'Visita finalizada',
       rescheduled: 'Visita reprogramada',
       cancelled: 'Visita cancelada',
+      postponed: 'La visita pasó al final de tu ruta',
       scheduled: 'Visita agendada',
       queued: 'Se enviará al servidor cuando haya conexión.',
     },
@@ -709,6 +720,7 @@ export const es = {
       COMPLETE: 'Finalizar',
       RESCHEDULE: 'Reprogramar',
       CANCEL: 'Cancelar',
+      POSTPONE: 'Volver más tarde',
     },
     indicator: {
       offline: 'Sin conexión',

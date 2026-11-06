@@ -52,6 +52,10 @@ export interface VisitProps {
   cancellationReason: string | null;
   /** Why it failed; null if it did not fail or was closed before reasons existed. */
   failureReason?: VisitFailureReason | null;
+  /** The customer asked to come back: last on that day's route (ISO instant). */
+  postponedAt?: string | null;
+  /** Time the customer mentioned (ISO instant): only a reminder. */
+  postponedUntil?: string | null;
   sellerId: string;
   sellerName: string | null;
   createdById: string;
@@ -78,7 +82,8 @@ const assertNotes = (notes: string | null | undefined): void => {
 /**
  * Unit of work of a seller (ADR 0016 in the API). Holds the same state machine as the
  * server, so offline actions are validated before they are queued:
- * SCHEDULED → IN_PROGRESS → COMPLETED, and SCHEDULED → CANCELLED.
+ * SCHEDULED → IN_PROGRESS → COMPLETED, SCHEDULED → CANCELLED, and IN_PROGRESS → SCHEDULED when
+ * the customer asks the seller to come back later.
  */
 export class VisitEntity {
   public readonly id: string;
@@ -96,6 +101,8 @@ export class VisitEntity {
   public readonly photoLocalUri: string | null;
   public readonly cancellationReason: string | null;
   public readonly failureReason: VisitFailureReason | null;
+  public readonly postponedAt: string | null;
+  public readonly postponedUntil: string | null;
   public readonly sellerId: string;
   public readonly sellerName: string | null;
   public readonly createdById: string;
@@ -122,6 +129,8 @@ export class VisitEntity {
     this.photoLocalUri = props.photoLocalUri;
     this.cancellationReason = props.cancellationReason;
     this.failureReason = props.failureReason ?? null;
+    this.postponedAt = props.postponedAt ?? null;
+    this.postponedUntil = props.postponedUntil ?? null;
     this.sellerId = props.sellerId;
     this.sellerName = props.sellerName;
     this.createdById = props.createdById;
@@ -152,6 +161,11 @@ export class VisitEntity {
 
   public canReschedule(): boolean {
     return this.status === 'SCHEDULED';
+  }
+
+  /** The customer is busy: it takes a check-in first, as proof the seller went. */
+  public canPostpone(): boolean {
+    return this.status === 'IN_PROGRESS';
   }
 
   public isClosed(): boolean {
@@ -223,6 +237,11 @@ export class VisitEntity {
 
   public assertCanReschedule(): void {
     if (!this.canReschedule()) throw new VisitInvalidTransitionError(this.status, 'SCHEDULED');
+  }
+
+  public assertCanPostpone(notes: string | null | undefined): void {
+    if (!this.canPostpone()) throw new VisitInvalidTransitionError(this.status, 'SCHEDULED');
+    assertNotes(notes);
   }
 
   /** Minutes elapsed since check-in (for the "visit in progress" banner). */

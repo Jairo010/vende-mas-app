@@ -2,6 +2,7 @@ import type { VisitEntity } from '../entities/visit.entity';
 import type {
   CancelVisitInput,
   CompleteVisitInput,
+  PostponeVisitInput,
   RescheduleVisitInput,
   ScheduleVisitInput,
   StartVisitInput,
@@ -30,4 +31,5 @@ export interface IVisitRepositoryPort {
   complete(id: string, input: CompleteVisitInput): Promise<VisitEntity>;
   reschedule(id: string, input: RescheduleVisitInput): Promise<VisitEntity>;
   cancel(id: string, input: CancelVisitInput): Promise<VisitEntity>;
+  postpone(id: string, input: PostponeVisitInput): Promise<VisitEntity>;
 }

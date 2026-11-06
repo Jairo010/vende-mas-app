@@ -134,6 +134,13 @@ export interface RescheduleVisitInput {
   notes?: string;
 }
 
+export interface PostponeVisitInput {
+  /** Why the seller must come back. */
+  notes: string;
+  /** ISO instant the customer mentioned, if any: only a reminder. */
+  returnAt?: string;
+}
+
 export interface CancelVisitInput {
   failureReason: VisitFailureReason;
   /** The notes of the cancellation: what happened, in words. */

@@ -132,6 +132,71 @@ describe('SqliteVisitRepository', () => {
     });
   });
 
+  it('leaves a visit for later and lets the seller check in again, each with its own operation', async () => {
+    const visit = await repository.schedule(
+      { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },
+      SELLER,
+    );
+    await repository.start(visit.id, { location: { latitude: -0.28, longitude: -78.54 } });
+
+    const postponed = await repository.postpone(visit.id, {
+      notes: 'Está en una reunión',
+      returnAt: '2026-10-14T20:00:00.000Z',
+    });
+
+    expect(postponed.status).toBe('SCHEDULED');
+    expect(postponed.start).toBeNull();
+    expect(postponed.distanceToCustomerMeters).toBeNull();
+    expect(postponed.postponedAt).toBe('2026-10-14T14:00:00.000Z');
+    expect(postponed.postponedUntil).toBe('2026-10-14T20:00:00.000Z');
+    expect(outboxRows()[2]).toMatchObject({
+      action: 'POSTPONE',
+      payload: {
+        notes: 'Está en una reunión',
+        returnAt: '2026-10-14T15:00:00-05:00',
+        postponedAt: '2026-10-14T09:00:00-05:00',
+      },
+    });
+
+    const again = await repository.start(visit.id, {});
+    expect(again.status).toBe('IN_PROGRESS');
+    expect(again.postponedAt).toBe('2026-10-14T14:00:00.000Z');
+
+    const rows = outboxRows();
+    expect(rows.map((row) => row.action)).toEqual(['SCHEDULE', 'START', 'POSTPONE', 'START']);
+    // A shared key would make the server drop the second check-in as a duplicate.
+    expect(rows[1].idempotencyKey).not.toBe(rows[3].idempotencyKey);
+  });
+
+  it('refuses to leave a visit for later without a check-in or notes, queueing nothing', async () => {
+    const visit = await repository.schedule(
+      { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },
+      SELLER,
+    );
+    await expect(repository.postpone(visit.id, { notes: 'Está ocupado' })).rejects.toBeInstanceOf(
+      VisitInvalidTransitionError,
+    );
+    await repository.start(visit.id, {});
+    await expect(repository.postpone(visit.id, { notes: 'no' })).rejects.toBeInstanceOf(
+      VisitNotesRequiredError,
+    );
+
+    expect(outboxRows().map((row) => row.action)).toEqual(['SCHEDULE', 'START']);
+  });
+
+  it('stops being left for later once rescheduled', async () => {
+    const visit = await repository.schedule(
+      { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },
+      SELLER,
+    );
+    await repository.start(visit.id, {});
+    await repository.postpone(visit.id, { notes: 'Está ocupado' });
+
+    const moved = await repository.reschedule(visit.id, { scheduledAt: '2026-10-21T15:00:00Z' });
+
+    expect(moved.postponedAt).toBeNull();
+  });
+
   it('validates the state machine before queueing anything', async () => {
     const visit = await repository.schedule(
       { type: 'ORDER', customerId: 'customer-1', scheduledAt: '2026-10-14T15:00:00.000Z' },

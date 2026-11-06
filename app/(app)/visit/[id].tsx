@@ -7,6 +7,7 @@ import {
   CalendarX,
   LogIn,
   LogOut,
+  Hourglass,
   XCircle,
 } from 'lucide-react-native';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
@@ -14,6 +15,7 @@ import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useStorePhotoCapture } from '@/application/hooks/device/use-store-photo-capture';
 import { useOrders } from '@/application/hooks/orders/use-orders';
 import { useCancelVisit } from '@/application/hooks/visits/use-cancel-visit';
+import { usePostponeVisit } from '@/application/hooks/visits/use-postpone-visit';
 import { useCheckInVisit } from '@/application/hooks/visits/use-check-in-visit';
 import { useCheckOutVisit } from '@/application/hooks/visits/use-check-out-visit';
 import { useRescheduleVisit } from '@/application/hooks/visits/use-reschedule-visit';
@@ -37,6 +39,7 @@ import { EmptyState } from '@/presentation/components/ui/empty-state';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import { CancelVisitSheet } from '@/presentation/features/visits/cancel-visit-sheet';
+import { PostponeVisitSheet } from '@/presentation/features/visits/postpone-visit-sheet';
 import { CheckpointCard } from '@/presentation/features/visits/checkpoint-card';
 import { RescheduleVisitSheet } from '@/presentation/features/visits/reschedule-visit-sheet';
 import { VisitHeaderCard } from '@/presentation/features/visits/visit-header-card';
@@ -51,7 +54,7 @@ import { es } from '@/shared/i18n/es';
 import { EMPTY_VISIT_DRAFT, useVisitDraftStore } from '@/stores/visit-draft.store';
 import { useThemeColors } from '@/theme';
 
-type OpenSheet = 'reschedule' | 'cancel' | null;
+type OpenSheet = 'reschedule' | 'cancel' | 'postpone' | null;
 
 /** Type of the follow-up visit: after closing a sale the next visit takes the order. */
 function followUpType(visit: VisitEntity): VisitType {
@@ -85,6 +88,7 @@ export default function VisitScreen() {
   const { checkOut, isPending: isCheckingOut, isLocating: isLocatingOut } = useCheckOutVisit();
   const { rescheduleVisit, isPending: isRescheduling } = useRescheduleVisit();
   const { cancelVisit, isPending: isCancelling } = useCancelVisit();
+  const { postponeVisit, isPending: isPostponing } = usePostponeVisit();
   const photo = useStorePhotoCapture();
 
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
@@ -240,6 +244,17 @@ export default function VisitScreen() {
       clearDraft(visit.id);
       setOpenSheet(null);
       notify.success(es.visits.toasts.cancelled);
+    } catch (error) {
+      notify.error(error);
+    }
+  };
+
+  // The draft stays: what the seller wrote or photographed is still there on coming back.
+  const postpone = async (notes: string, returnAt?: string) => {
+    try {
+      await postponeVisit({ id: visit.id, notes, returnAt });
+      setOpenSheet(null);
+      notify.success(es.visits.toasts.postponed);
     } catch (error) {
       notify.error(error);
     }
@@ -433,6 +448,16 @@ export default function VisitScreen() {
                   {es.visits.actions.reschedule}
                 </Button>
               ) : null}
+              {isMine && visit.canPostpone() ? (
+                <Button
+                  testID="visit-postpone"
+                  variant="outline"
+                  leftIcon={<Hourglass size={16} color={colors.foreground} />}
+                  onPress={() => setOpenSheet('postpone')}
+                >
+                  {es.visits.actions.postpone}
+                </Button>
+              ) : null}
               {visit.canCancel() ? (
                 <Button
                   testID="visit-cancel"
@@ -457,6 +482,12 @@ export default function VisitScreen() {
         onClose={() => setOpenSheet(null)}
         onConfirm={reschedule}
         isSubmitting={isRescheduling}
+      />
+      <PostponeVisitSheet
+        open={openSheet === 'postpone'}
+        onClose={() => setOpenSheet(null)}
+        onConfirm={postpone}
+        isSubmitting={isPostponing}
       />
       <CancelVisitSheet
         open={openSheet === 'cancel'}

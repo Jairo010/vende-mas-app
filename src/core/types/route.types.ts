@@ -27,6 +27,11 @@ export interface RoutePlan {
   totalDurationSeconds: number;
   /** Google encoded polyline of the drive; null for an estimated route (straight lines). */
   encodedPolyline: string | null;
+  /**
+   * Index of the first leg the customer asked to leave for later: those legs are estimated on the
+   * device and `encodedPolyline` does not reach them. Absent: none.
+   */
+  postponedFrom?: number;
   /** ISO instant. */
   computedAt: string;
 }

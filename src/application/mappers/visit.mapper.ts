@@ -49,6 +49,8 @@ export class VisitMapper {
       failureReason: dto.failureReason
         ? pickEnum<VisitFailureReason | null>(dto.failureReason, VISIT_FAILURE_REASONS, null)
         : null,
+      postponedAt: dto.postponedAt ?? null,
+      postponedUntil: dto.postponedUntil ?? null,
       sellerId: dto.sellerId,
       sellerName: dto.seller?.name ?? null,
       createdById: dto.createdById,

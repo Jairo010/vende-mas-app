@@ -14,6 +14,7 @@ import {
   VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER,
   type CancelVisitInput,
   type CompleteVisitInput,
+  type PostponeVisitInput,
   type RescheduleVisitInput,
   type ScheduleVisitInput,
   type StartVisitInput,
@@ -22,6 +23,7 @@ import {
 import { distanceInMeters } from '@/core/value-objects/geo-distance';
 import type {
   CancelVisitRequestDto,
+  PostponeVisitRequestDto,
   CompleteVisitRequestDto,
   RescheduleVisitRequestDto,
   ScheduleVisitRequestDto,
@@ -299,6 +301,8 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           scheduledAt,
           hasScheduledTime,
           notes: input.notes ?? visit.notes,
+          postponedAt: null,
+          postponedUntil: null,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
         })
@@ -347,10 +351,47 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     });
   }
 
+  public async postpone(id: string, input: PostponeVisitInput): Promise<VisitEntity> {
+    const now = this.ctx.now();
+    const nowIso = now.toISOString();
+    const returnAt = input.returnAt ? new Date(input.returnAt).toISOString() : null;
+
+    return this.ctx.db().transaction((tx) => {
+      const visit = this.loadOrThrow(tx, id);
+      visit.assertCanPostpone(input.notes);
+
+      // The check-in stays in the trail on the server; these fields wait for the next one.
+      tx.update(visits)
+        .set({
+          status: 'SCHEDULED',
+          startedAt: null,
+          startLatitude: null,
+          startLongitude: null,
+          startAccuracyMeters: null,
+          distanceToCustomerMeters: null,
+          postponedAt: nowIso,
+          postponedUntil: returnAt,
+          syncStatus: 'PENDING',
+          updatedAt: nowIso,
+        })
+        .where(eq(visits.id, id))
+        .run();
+
+      const payload: PostponeVisitRequestDto = {
+        notes: input.notes,
+        returnAt: returnAt ? toZonedIsoString(returnAt) : undefined,
+        postponedAt: toZonedIsoString(now),
+      };
+      this.enqueue(tx, id, 'POSTPONE', compact(payload), now);
+
+      return this.loadOrThrow(tx, id);
+    });
+  }
+
   private enqueue(
     tx: DbExecutor,
     visitId: string,
-    action: 'SCHEDULE' | 'START' | 'COMPLETE' | 'RESCHEDULE' | 'CANCEL',
+    action: 'SCHEDULE' | 'START' | 'COMPLETE' | 'RESCHEDULE' | 'CANCEL' | 'POSTPONE',
     payload: Record<string, unknown>,
     now: Date,
     photoId: string | null = null,

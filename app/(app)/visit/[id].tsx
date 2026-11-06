@@ -433,15 +433,17 @@ export default function VisitScreen() {
                   {es.visits.actions.reschedule}
                 </Button>
               ) : null}
-              <Button
-                testID="visit-cancel"
-                variant="ghost"
-                leftIcon={<XCircle size={16} color={colors.destructive} />}
-                textClassName="text-destructive"
-                onPress={() => setOpenSheet('cancel')}
-              >
-                {es.visits.actions.cancel}
-              </Button>
+              {visit.canCancel() ? (
+                <Button
+                  testID="visit-cancel"
+                  variant="ghost"
+                  leftIcon={<XCircle size={16} color={colors.destructive} />}
+                  textClassName="text-destructive"
+                  onPress={() => setOpenSheet('cancel')}
+                >
+                  {es.visits.actions.cancel}
+                </Button>
+              ) : null}
             </View>
           ) : null}
         </ScrollView>

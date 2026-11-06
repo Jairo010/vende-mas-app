@@ -19,6 +19,9 @@ when closing the visit.
   interesado", "Sin pedido" or "No cobrado" shows the reasons of that outcome, and one is required.
   Changing the outcome drops a chosen reason that no longer applies.
 - **Cancelling:** a reason and notes are always required. The notes travel as the existing `reason`.
+  Only a scheduled visit can be cancelled, as in the API: the app used to offer it on a visit in
+  progress and the server rejected it. After a check-in, the seller closes with an outcome and
+  reason ("Sin pedido", "Local cerrado"), which keeps the check-in on record.
 - `visits.failure_reason` (drizzle migration `0005`) stores the reason locally and comes back in
   the sync pull. The draft keeps it per visit, like the notes and the photo.
 - `ChoiceGroup` is the grid of radio buttons shared by the outcome and the reason.

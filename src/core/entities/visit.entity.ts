@@ -78,7 +78,7 @@ const assertNotes = (notes: string | null | undefined): void => {
 /**
  * Unit of work of a seller (ADR 0016 in the API). Holds the same state machine as the
  * server, so offline actions are validated before they are queued:
- * SCHEDULED → IN_PROGRESS → COMPLETED, and SCHEDULED | IN_PROGRESS → CANCELLED.
+ * SCHEDULED → IN_PROGRESS → COMPLETED, and SCHEDULED → CANCELLED.
  */
 export class VisitEntity {
   public readonly id: string;
@@ -145,8 +145,9 @@ export class VisitEntity {
     return this.status === 'IN_PROGRESS';
   }
 
+  /** Same rule as the API. A visit in progress is closed with its outcome and reason instead. */
   public canCancel(): boolean {
-    return this.status === 'SCHEDULED' || this.status === 'IN_PROGRESS';
+    return this.status === 'SCHEDULED';
   }
 
   public canReschedule(): boolean {

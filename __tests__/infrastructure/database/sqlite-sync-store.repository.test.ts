@@ -3,7 +3,13 @@ import { SqliteSyncStoreRepository } from '@/infrastructure/database/repositorie
 import { SqliteVisitRepository } from '@/infrastructure/database/repositories/sqlite-visit.repository';
 import { SqliteCatalogRepository } from '@/infrastructure/database/repositories/sqlite-catalog.repository';
 import { SqliteOrderRepository } from '@/infrastructure/database/repositories/sqlite-order.repository';
-import { customerProducts, customers, outbox, visits } from '@/infrastructure/database/schema';
+import {
+  customerProducts,
+  customers,
+  outbox,
+  routeDays,
+  visits,
+} from '@/infrastructure/database/schema';
 import type { AppDatabase } from '@/infrastructure/database/database.types';
 import type { SyncChangeSet } from '@/core/ports/sync.ports';
 import { CustomerEntity, type CustomerProps } from '@/core/entities/customer.entity';
@@ -26,6 +32,7 @@ function emptyChanges(overrides: Partial<SyncChangeSet> = {}): SyncChangeSet {
     categories: [],
     promotions: [],
     zones: null,
+    routeDays: null,
     receivables: [],
     payments: [],
     customerProducts: [],
@@ -281,6 +288,29 @@ describe('SqliteSyncStoreRepository', () => {
 
     const rows = db.select().from(customerProducts).all();
     expect(rows).toEqual([{ id: 'cp-1', ...stat, lastQuantity: 6 }]);
+  });
+
+  it('replaces the route days, and keeps them when an older server sends none', async () => {
+    const read = () => db.select().from(routeDays).all();
+
+    await store.applyPull(
+      emptyChanges({
+        routeDays: [
+          { weekday: 1, zoneId: 'centro' },
+          { weekday: 4, zoneId: 'centro' },
+        ],
+      }),
+    );
+    expect(read()).toHaveLength(2);
+
+    await store.applyPull(emptyChanges({ routeDays: [{ weekday: 2, zoneId: 'norte' }] }));
+    expect(read()).toEqual([{ weekday: 2, zoneId: 'norte' }]);
+
+    await store.applyPull(emptyChanges({ routeDays: null }));
+    expect(read()).toHaveLength(1);
+
+    await store.applyPull(emptyChanges({ routeDays: [] }));
+    expect(read()).toEqual([]);
   });
 
   it('keeps the cursor and last sync time, and wipes everything on clearAll', async () => {

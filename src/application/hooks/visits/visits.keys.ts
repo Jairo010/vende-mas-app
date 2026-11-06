@@ -8,4 +8,5 @@ export const visitsKeys = {
   detail: (id: string) => [...visitsKeys.details(), id] as const,
   byCustomer: (customerId: string) => [...visitsKeys.all, 'by-customer', customerId] as const,
   inProgress: (sellerId: string) => [...visitsKeys.all, 'in-progress', sellerId] as const,
+  routeDays: () => [...visitsKeys.all, 'route-days'] as const,
 };

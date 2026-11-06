@@ -14,6 +14,8 @@ import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useStorePhotoCapture } from '@/application/hooks/device/use-store-photo-capture';
 import { useOrders } from '@/application/hooks/orders/use-orders';
+import { useRouteDays } from '@/application/hooks/route/use-route-days';
+import { nextRouteDates } from '@/application/route/route-days';
 import { useCancelVisit } from '@/application/hooks/visits/use-cancel-visit';
 import { usePostponeVisit } from '@/application/hooks/visits/use-postpone-visit';
 import { useCheckInVisit } from '@/application/hooks/visits/use-check-in-visit';
@@ -50,6 +52,7 @@ import {
   type VisitWorkErrors,
 } from '@/presentation/features/visits/visit-work-panel';
 import { useNow } from '@/shared/hooks/use-now';
+import { todayKey, toDateKey } from '@/shared/utils/date';
 import { es } from '@/shared/i18n/es';
 import { EMPTY_VISIT_DRAFT, useVisitDraftStore } from '@/stores/visit-draft.store';
 import { useThemeColors } from '@/theme';
@@ -70,7 +73,7 @@ export default function VisitScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const now = useNow();
-  const { user, isAdmin, isSupervisor, canSeeLocationTracking } = useAuthSession();
+  const { user, isAdmin, isSupervisor, isSeller, canSeeLocationTracking } = useAuthSession();
 
   const { visit, isLoading } = useVisit(id);
   const { customer } = useCustomer(visit?.customerId);
@@ -89,6 +92,7 @@ export default function VisitScreen() {
   const { rescheduleVisit, isPending: isRescheduling } = useRescheduleVisit();
   const { cancelVisit, isPending: isCancelling } = useCancelVisit();
   const { postponeVisit, isPending: isPostponing } = usePostponeVisit();
+  const { routeDays } = useRouteDays();
   const photo = useStorePhotoCapture();
 
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
@@ -141,6 +145,11 @@ export default function VisitScreen() {
     draft.outcome !== null &&
     VisitEntity.outcomeRequiresActiveCustomer(draft.outcome) &&
     !customerIsActive;
+
+  // Admins and supervisors plan the routes: only a seller is held to the days of theirs.
+  const routeDates = isSeller
+    ? nextRouteDates(customer?.zoneId, routeDays, todayKey(now), toDateKey(visit.scheduledAt))
+    : [];
 
   const openBilling = () =>
     router.push({ pathname: '/(app)/customer/[id]/billing', params: { id: visit.customerId } });
@@ -478,6 +487,7 @@ export default function VisitScreen() {
 
       <RescheduleVisitSheet
         visit={visit}
+        routeDates={routeDates}
         open={openSheet === 'reschedule'}
         onClose={() => setOpenSheet(null)}
         onConfirm={reschedule}

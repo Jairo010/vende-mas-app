@@ -302,6 +302,8 @@ export const es = {
     reschedule: {
       title: 'Reprogramar visita',
       confirm: 'Reprogramar',
+      routeDays: 'Días de tu ruta con este cliente',
+      chooseDay: 'Elige uno de los días de tu ruta',
     },
     postpone: {
       title: 'Volver más tarde',

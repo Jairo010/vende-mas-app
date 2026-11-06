@@ -3,6 +3,12 @@ import type { GeoPoint } from './geo.types';
 /** GOOGLE: real streets and live traffic. ESTIMATE: ordered on straight lines (offline or limit). */
 export type RouteProvider = 'GOOGLE' | 'ESTIMATE';
 
+/** A day of the week the seller's route goes through a zone (1 = Monday … 7 = Sunday). */
+export interface RouteDay {
+  weekday: number;
+  zoneId: string;
+}
+
 /** A visit to make today, at its store location. `id` is the visit id. */
 export interface RouteStop {
   id: string;

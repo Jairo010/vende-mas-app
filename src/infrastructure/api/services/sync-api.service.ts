@@ -83,6 +83,7 @@ export class SyncApiService implements ISyncRemotePort {
       zones: data.zones
         ? data.zones.filter((z) => z.isActive).map((z) => ({ id: z.id, name: z.name }))
         : null,
+      routeDays: data.routeDays ?? null,
       receivables: (data.receivables ?? []).map(CollectionMapper.toReceivable),
       payments: (data.payments ?? []).map(CollectionMapper.toPayment),
       customerProducts: (data.customerProducts ?? [])

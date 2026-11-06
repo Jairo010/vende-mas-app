@@ -42,6 +42,17 @@ The plan then shows as "Ruta estimada", because part of it is no longer what the
 and "Recalcular" stays available. The API is only called for the first route of the day, a new
 stop, a store that moved, or "Recalcular".
 
+### Rescheduling on route days
+
+- The sync pull brings the seller's weekly route (`routeDays`, a full list stored in `route_days`),
+  so the rule works offline. The API enforces it too (API ADR 0037).
+- For a seller and a customer on their route, `RescheduleVisitSheet` offers the next 4 valid dates
+  (`nextRouteDates`) instead of the free calendar. The visit's current date is not offered. A
+  customer off the route, or an admin or supervisor, keeps the calendar.
+- A plan changed while offline makes the server reject the operation, shown with the other
+  rejected ones. A route visit already on the target day is merged by the server and disappears
+  from the phone on the next sync.
+
 ## Consequences
 
 - An order slightly less optimal after a change of plans, in exchange for not paying for it.

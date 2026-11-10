@@ -1,13 +1,21 @@
 import {
   VisitCustomerNotInvoiceableError,
+  VisitFailureReasonRequiredError,
+  VisitInvalidFailureReasonError,
   VisitInvalidTransitionError,
+  VisitNotesRequiredError,
   VisitOutcomeNotAllowedError,
 } from '../errors/visit.errors';
 import {
+  CANCELLATION_FAILURE_REASONS,
+  FAILURE_REASONS_BY_OUTCOME,
+  hasValidVisitNotes,
+  MIN_VISIT_NOTES_LENGTH,
   OUTCOMES_BY_TYPE,
   OUTCOMES_REQUIRING_ACTIVE_CUSTOMER,
   type LocalSyncStatus,
   type VisitCheckpoint,
+  type VisitFailureReason,
   type VisitOutcome,
   type VisitStatus,
   type VisitType,
@@ -42,6 +50,12 @@ export interface VisitProps {
   photoUrl: string | null;
   photoLocalUri: string | null;
   cancellationReason: string | null;
+  /** Why it failed; null if it did not fail or was closed before reasons existed. */
+  failureReason?: VisitFailureReason | null;
+  /** The customer asked to come back: last on that day's route (ISO instant). */
+  postponedAt?: string | null;
+  /** Time the customer mentioned (ISO instant): only a reminder. */
+  postponedUntil?: string | null;
   sellerId: string;
   sellerName: string | null;
   createdById: string;
@@ -53,10 +67,23 @@ export interface VisitProps {
   updatedAt: string;
 }
 
+const assertAllowedReason = (
+  reason: VisitFailureReason | null | undefined,
+  allowed: readonly VisitFailureReason[],
+): void => {
+  if (!reason) throw new VisitFailureReasonRequiredError(allowed);
+  if (!allowed.includes(reason)) throw new VisitInvalidFailureReasonError(reason, allowed);
+};
+
+const assertNotes = (notes: string | null | undefined): void => {
+  if (!hasValidVisitNotes(notes)) throw new VisitNotesRequiredError(MIN_VISIT_NOTES_LENGTH);
+};
+
 /**
  * Unit of work of a seller (ADR 0016 in the API). Holds the same state machine as the
  * server, so offline actions are validated before they are queued:
- * SCHEDULED → IN_PROGRESS → COMPLETED, and SCHEDULED | IN_PROGRESS → CANCELLED.
+ * SCHEDULED → IN_PROGRESS → COMPLETED, SCHEDULED → CANCELLED, and IN_PROGRESS → SCHEDULED when
+ * the customer asks the seller to come back later.
  */
 export class VisitEntity {
   public readonly id: string;
@@ -73,6 +100,9 @@ export class VisitEntity {
   public readonly photoUrl: string | null;
   public readonly photoLocalUri: string | null;
   public readonly cancellationReason: string | null;
+  public readonly failureReason: VisitFailureReason | null;
+  public readonly postponedAt: string | null;
+  public readonly postponedUntil: string | null;
   public readonly sellerId: string;
   public readonly sellerName: string | null;
   public readonly createdById: string;
@@ -98,6 +128,9 @@ export class VisitEntity {
     this.photoUrl = props.photoUrl;
     this.photoLocalUri = props.photoLocalUri;
     this.cancellationReason = props.cancellationReason;
+    this.failureReason = props.failureReason ?? null;
+    this.postponedAt = props.postponedAt ?? null;
+    this.postponedUntil = props.postponedUntil ?? null;
     this.sellerId = props.sellerId;
     this.sellerName = props.sellerName;
     this.createdById = props.createdById;
@@ -121,12 +154,18 @@ export class VisitEntity {
     return this.status === 'IN_PROGRESS';
   }
 
+  /** Same rule as the API. A visit in progress is closed with its outcome and reason instead. */
   public canCancel(): boolean {
-    return this.status === 'SCHEDULED' || this.status === 'IN_PROGRESS';
+    return this.status === 'SCHEDULED';
   }
 
   public canReschedule(): boolean {
     return this.status === 'SCHEDULED';
+  }
+
+  /** The customer is busy: it takes a check-in first, as proof the seller went. */
+  public canPostpone(): boolean {
+    return this.status === 'IN_PROGRESS';
   }
 
   public isClosed(): boolean {
@@ -167,12 +206,42 @@ export class VisitEntity {
     }
   }
 
+  /** Reasons the outcome asks for; null when it did not fail and takes none. */
+  public static failureReasonsFor(outcome: VisitOutcome): readonly VisitFailureReason[] | null {
+    return FAILURE_REASONS_BY_OUTCOME[outcome] ?? null;
+  }
+
+  /** Notes are always required; the reason only on outcomes that achieved nothing. */
+  public static assertCompletionDetails(
+    outcome: VisitOutcome,
+    notes: string | null | undefined,
+    failureReason: VisitFailureReason | null | undefined,
+  ): void {
+    const reasons = VisitEntity.failureReasonsFor(outcome);
+    if (!reasons && failureReason) throw new VisitInvalidFailureReasonError(failureReason, []);
+    if (reasons) assertAllowedReason(failureReason, reasons);
+    assertNotes(notes);
+  }
+
   public assertCanCancel(): void {
     if (!this.canCancel()) throw new VisitInvalidTransitionError(this.status, 'CANCELLED');
   }
 
+  public static assertCancellationDetails(
+    failureReason: VisitFailureReason | null | undefined,
+    notes: string | null | undefined,
+  ): void {
+    assertAllowedReason(failureReason, CANCELLATION_FAILURE_REASONS);
+    assertNotes(notes);
+  }
+
   public assertCanReschedule(): void {
     if (!this.canReschedule()) throw new VisitInvalidTransitionError(this.status, 'SCHEDULED');
+  }
+
+  public assertCanPostpone(notes: string | null | undefined): void {
+    if (!this.canPostpone()) throw new VisitInvalidTransitionError(this.status, 'SCHEDULED');
+    assertNotes(notes);
   }
 
   /** Minutes elapsed since check-in (for the "visit in progress" banner). */

@@ -130,6 +130,8 @@ describe('SqlitePendingPhotoRepository', () => {
     await visitRepository.start(visit.id, {});
     await visitRepository.complete(visit.id, {
       outcome: 'NO_ORDER',
+      notes: 'Tiene mercadería',
+      failureReason: 'HAS_STOCK',
       photoLocalUri: 'file:///p.jpg',
     });
 

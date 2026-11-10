@@ -9,7 +9,12 @@ import { routeApiService } from '@/infrastructure/api/services/route-api.service
 import { useRoutePlanStore } from '@/stores/route-plan.store';
 import { useNow } from '@/shared/hooks/use-now';
 import { dayRange, toDateKey, todayKey } from '@/shared/utils/date';
-import { dayRouteStops, orderedRouteVisits, reconcilePlan } from '../../route/route-plan';
+import {
+  dayRouteStops,
+  orderedRouteVisits,
+  reconcilePlan,
+  withPostponedStops,
+} from '../../route/route-plan';
 import { useAuthSession } from '../auth/use-auth-session';
 import { useVisits } from '../visits/use-visits';
 
@@ -49,8 +54,9 @@ function fallbackOrigin(visits: readonly VisitEntity[], stops: readonly RouteSto
  * Optimal route of today's pending visits of the signed-in user.
  *
  * - Computed once (API → Google, or the device estimate offline) and saved for the day.
- * - Doing the visits in the suggested order only trims the saved plan: no new API call.
- * - Adding, cancelling or doing a visit out of order recomputes from the current position.
+ * - Doing, cancelling or postponing visits only adjusts the saved plan: no new API call.
+ * - A new stop or a store that moved recomputes from the current position, and so does "Recalcular".
+ * - Visits left for later are never optimized: they go after the plan, estimated on the device.
  */
 export function useRoutePlan(
   optimizer: IRouteOptimizerPort = routeApiService,
@@ -66,7 +72,7 @@ export function useRoutePlan(
     () => visits.filter((visit) => toDateKey(visit.scheduledAt) === today),
     [visits, today],
   );
-  const { stops, unlocated } = useMemo(
+  const { stops, postponed, unlocated } = useMemo(
     () => dayRouteStops(todaysVisits, userId, today),
     [todaysVisits, userId, today],
   );
@@ -74,7 +80,7 @@ export function useRoutePlan(
 
   const saved = useRoutePlanStore((state) => state.saved);
   const save = useRoutePlanStore((state) => state.save);
-  const plan = saved && saved.userId === userId && saved.date === today ? saved.plan : null;
+  const savedPlan = saved && saved.userId === userId && saved.date === today ? saved.plan : null;
 
   const [isComputing, setIsComputing] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -112,29 +118,39 @@ export function useRoutePlan(
 
   useEffect(() => {
     if (isLoading || !userId || stops.length === 0) return;
-    if (!plan) {
+    if (!savedPlan) {
       void compute();
       return;
     }
-    const result = reconcilePlan(plan, stops);
-    if (result.kind === 'trimmed') save({ userId, date: today, plan: result.plan });
-    else if (result.kind === 'recompute') void compute();
-    // `key` stands for `stops` (a new array on every refetch); `plan` changes only when saved.
-  }, [key, isLoading, userId, today, plan]);
+    const result = reconcilePlan(savedPlan, stops);
+    if (result.kind === 'trimmed' || result.kind === 'patched') {
+      save({ userId, date: today, plan: result.plan });
+    } else if (result.kind === 'recompute') void compute();
+    // `key` stands for `stops` (a new array on every refetch); `savedPlan` changes only when saved.
+  }, [key, isLoading, userId, today, savedPlan]);
+
+  // Nothing to show until the plan of the regular stops exists, unless only postponed ones remain.
+  const plan = useMemo(() => {
+    if (postponed.length === 0) return stops.length > 0 ? savedPlan : null;
+    if (stops.length === 0) {
+      return withPostponedStops(null, postponed, fallbackOrigin(todaysVisits, postponed));
+    }
+    return savedPlan ? withPostponedStops(savedPlan, postponed, savedPlan.origin) : null;
+  }, [savedPlan, stops, postponed, todaysVisits]);
 
   const items = useMemo(() => {
     if (!plan) return [];
-    const pending = new Set(stops.map((stop) => stop.id));
+    const pending = new Set([...stops, ...postponed].map((stop) => stop.id));
     return orderedRouteVisits(plan, todaysVisits).filter(({ visit }) => pending.has(visit.id));
-  }, [plan, stops, todaysVisits]);
+  }, [plan, stops, postponed, todaysVisits]);
 
   return {
-    plan: stops.length > 0 ? plan : null,
+    plan,
     /** Pending visits in route order, with the leg that reaches each one. */
     items,
     /** Pending visits whose store has no location yet. */
     unlocated,
-    hasStops: stops.length > 0,
+    hasStops: stops.length + postponed.length > 0,
     isLoading,
     isComputing,
     error,

@@ -1,19 +1,23 @@
-import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CalendarClock,
   CalendarPlus,
   CalendarX,
   LogIn,
   LogOut,
+  Hourglass,
   XCircle,
 } from 'lucide-react-native';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useStorePhotoCapture } from '@/application/hooks/device/use-store-photo-capture';
 import { useOrders } from '@/application/hooks/orders/use-orders';
+import { useRouteDays } from '@/application/hooks/route/use-route-days';
+import { nextRouteDates } from '@/application/route/route-days';
 import { useCancelVisit } from '@/application/hooks/visits/use-cancel-visit';
+import { usePostponeVisit } from '@/application/hooks/visits/use-postpone-visit';
 import { useCheckInVisit } from '@/application/hooks/visits/use-check-in-visit';
 import { useCheckOutVisit } from '@/application/hooks/visits/use-check-out-visit';
 import { useRescheduleVisit } from '@/application/hooks/visits/use-reschedule-visit';
@@ -21,7 +25,13 @@ import { useVisit } from '@/application/hooks/visits/use-visit';
 import { useVisitInProgress } from '@/application/hooks/visits/use-visit-in-progress';
 import { VisitEntity } from '@/core/entities/visit.entity';
 import { VisitAlreadyInProgressError } from '@/core/errors/visit.errors';
-import type { VisitOutcome, VisitType } from '@/core/types/visit.types';
+import {
+  hasValidVisitNotes,
+  losesCustomer,
+  type VisitFailureReason,
+  type VisitOutcome,
+  type VisitType,
+} from '@/core/types/visit.types';
 import { DetailRow } from '@/presentation/components/common/detail-row';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
@@ -32,7 +42,9 @@ import { EmptyState } from '@/presentation/components/ui/empty-state';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import { CancelVisitSheet } from '@/presentation/features/visits/cancel-visit-sheet';
+import { PostponeVisitSheet } from '@/presentation/features/visits/postpone-visit-sheet';
 import { CheckpointCard } from '@/presentation/features/visits/checkpoint-card';
+import { LoseCustomerSheet } from '@/presentation/features/visits/lose-customer-sheet';
 import { RescheduleVisitSheet } from '@/presentation/features/visits/reschedule-visit-sheet';
 import { VisitHeaderCard } from '@/presentation/features/visits/visit-header-card';
 import { VisitOrdersCard } from '@/presentation/features/visits/visit-orders-card';
@@ -42,11 +54,12 @@ import {
   type VisitWorkErrors,
 } from '@/presentation/features/visits/visit-work-panel';
 import { useNow } from '@/shared/hooks/use-now';
+import { todayKey, toDateKey } from '@/shared/utils/date';
 import { es } from '@/shared/i18n/es';
 import { EMPTY_VISIT_DRAFT, useVisitDraftStore } from '@/stores/visit-draft.store';
 import { useThemeColors } from '@/theme';
 
-type OpenSheet = 'reschedule' | 'cancel' | null;
+type OpenSheet = 'reschedule' | 'cancel' | 'postpone' | 'lose' | null;
 
 /** Type of the follow-up visit: after closing a sale the next visit takes the order. */
 function followUpType(visit: VisitEntity): VisitType {
@@ -56,13 +69,15 @@ function followUpType(visit: VisitEntity): VisitType {
 /**
  * The visit, step by step: check-in (GPS) → work by type (photo, outcome, order, notes) →
  * check-out (GPS) → schedule the next one. Everything is written locally (offline-first).
+ * A finished visit holds the seller until the next one is scheduled, unless the customer is no
+ * longer interested (app ADR 0015).
  */
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useThemeColors();
   const now = useNow();
-  const { user, isAdmin, isSupervisor, canSeeLocationTracking } = useAuthSession();
+  const { user, isAdmin, isSupervisor, isSeller, canSeeLocationTracking } = useAuthSession();
 
   const { visit, isLoading } = useVisit(id);
   const { customer } = useCustomer(visit?.customerId);
@@ -71,18 +86,33 @@ export default function VisitScreen() {
   const { orders } = useOrders(ordersFilter);
 
   const storedDraft = useVisitDraftStore((state) => (id ? state.drafts[id] : undefined));
-  const draft = storedDraft ?? EMPTY_VISIT_DRAFT;
+  // Merged over the empty one: a draft saved by an older version lacks the newer fields.
+  const draft = { ...EMPTY_VISIT_DRAFT, ...storedDraft };
   const updateDraft = useVisitDraftStore((state) => state.updateDraft);
   const clearDraft = useVisitDraftStore((state) => state.clearDraft);
+  const pendingFollowUpId = useVisitDraftStore((state) => state.pendingFollowUpId);
+  const requireFollowUp = useVisitDraftStore((state) => state.requireFollowUp);
 
   const { checkIn, isPending: isCheckingIn, isLocating: isLocatingIn } = useCheckInVisit();
   const { checkOut, isPending: isCheckingOut, isLocating: isLocatingOut } = useCheckOutVisit();
   const { rescheduleVisit, isPending: isRescheduling } = useRescheduleVisit();
   const { cancelVisit, isPending: isCancelling } = useCancelVisit();
+  const { postponeVisit, isPending: isPostponing } = usePostponeVisit();
+  const { routeDays } = useRouteDays();
   const photo = useStorePhotoCapture();
 
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
   const [showErrors, setShowErrors] = useState(false);
+
+  // No way out but scheduling the next visit: the Android back button does nothing.
+  const holdsSeller = Boolean(
+    visit && visit.id === pendingFollowUpId && visit.status === 'COMPLETED',
+  );
+  useEffect(() => {
+    if (!holdsSeller) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [holdsSeller]);
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/agenda');
@@ -122,10 +152,20 @@ export default function VisitScreen() {
   if (visit.type === 'OPPORTUNITY' && photoRequired && !draft.photoUri) {
     errors.photo = es.visits.validation.photoRequired;
   }
+  if (!hasValidVisitNotes(draft.notes)) errors.notes = es.visits.validation.notesRequired;
+  const failureReasons = draft.outcome ? VisitEntity.failureReasonsFor(draft.outcome) : null;
+  if (failureReasons && !draft.failureReason) {
+    errors.failureReason = es.visits.validation.reasonRequired;
+  }
   const billingMissing =
     draft.outcome !== null &&
     VisitEntity.outcomeRequiresActiveCustomer(draft.outcome) &&
     !customerIsActive;
+
+  // Admins and supervisors plan the routes: only a seller is held to the days of theirs.
+  const routeDates = isSeller
+    ? nextRouteDates(customer?.zoneId, routeDays, todayKey(now), toDateKey(visit.scheduledAt))
+    : [];
 
   const openBilling = () =>
     router.push({ pathname: '/(app)/customer/[id]/billing', params: { id: visit.customerId } });
@@ -149,13 +189,13 @@ export default function VisitScreen() {
   const openPayment = (payment: { id: string }) =>
     router.push({ pathname: '/(app)/payment/[id]', params: { id: payment.id } });
 
-  const scheduleNext = () =>
+  const scheduleNext = (closed: VisitEntity = visit) =>
     router.push({
       pathname: '/(app)/visit/new',
       params: {
-        customerId: visit.customerId,
-        type: followUpType(visit),
-        parentVisitId: visit.id,
+        customerId: closed.customerId,
+        type: followUpType(closed),
+        parentVisitId: closed.id,
       },
     });
 
@@ -175,22 +215,44 @@ export default function VisitScreen() {
 
   const finish = async () => {
     setShowErrors(true);
-    if (!draft.outcome || errors.photo) return;
+    if (!draft.outcome || errors.photo || errors.notes || errors.failureReason) {
+      // The field at fault may be out of view: the footer button is far from them.
+      notify.warning(es.visits.validation.incomplete);
+      return;
+    }
     if (billingMissing) {
       notify.warning(es.visits.validation.billingRequired);
       return;
     }
+    if (losesCustomer(draft.failureReason)) {
+      setOpenSheet('lose');
+      return;
+    }
+    await complete();
+  };
+
+  const complete = async () => {
+    if (!draft.outcome) return;
+    const lost = losesCustomer(draft.failureReason);
     try {
-      const { reading } = await checkOut(visit.id, {
+      const { visit: closed, reading } = await checkOut(visit.id, {
         outcome: draft.outcome,
-        notes: draft.notes.trim() || undefined,
+        notes: draft.notes.trim(),
+        failureReason: draft.failureReason ?? undefined,
         photoLocalUri: draft.photoUri ?? undefined,
       });
       clearDraft(visit.id);
       setShowErrors(false);
-      if (reading.ok || !canSeeLocationTracking) {
+      setOpenSheet(null);
+      if (lost) notify.success(es.visits.toasts.completed, es.visits.toasts.lost);
+      else if (reading.ok || !canSeeLocationTracking) {
         notify.success(es.visits.toasts.completed, es.visits.toasts.queued);
       } else notify.warning(es.visits.toasts.completed, es.visits.gps.failures[reading.reason]);
+      if (!lost) {
+        // Kept until the next visit is saved: closing the app does not skip it.
+        requireFollowUp(closed.id);
+        scheduleNext(closed);
+      }
     } catch (error) {
       notify.error(error);
     }
@@ -217,13 +279,24 @@ export default function VisitScreen() {
     }
   };
 
-  const cancel = async (reason: string | undefined) => {
+  const cancel = async (failureReason: VisitFailureReason, notes: string) => {
     try {
-      await cancelVisit({ id: visit.id, reason });
+      await cancelVisit({ id: visit.id, failureReason, reason: notes });
       if (draft.photoUri) photo.discard(draft.photoUri);
       clearDraft(visit.id);
       setOpenSheet(null);
       notify.success(es.visits.toasts.cancelled);
+    } catch (error) {
+      notify.error(error);
+    }
+  };
+
+  // The draft stays: what the seller wrote or photographed is still there on coming back.
+  const postpone = async (notes: string, returnAt?: string) => {
+    try {
+      await postponeVisit({ id: visit.id, notes, returnAt });
+      setOpenSheet(null);
+      notify.success(es.visits.toasts.postponed);
     } catch (error) {
       notify.error(error);
     }
@@ -266,10 +339,12 @@ export default function VisitScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      {/* iOS: no swipe back either while the next visit is missing. */}
+      <Stack.Screen options={{ gestureEnabled: !holdsSeller }} />
       <ScreenHeader
         title={es.visits.detailTitle}
         subtitle={visit.customer?.tradeName}
-        onBack={goBack}
+        onBack={holdsSeller ? undefined : goBack}
       />
 
       <KeyboardAvoidingView
@@ -319,7 +394,16 @@ export default function VisitScreen() {
               orders={orders}
               errors={showErrors ? errors : {}}
               isCapturingPhoto={photo.isCapturing}
-              onChangeOutcome={(outcome: VisitOutcome) => updateDraft(visit.id, { outcome })}
+              onChangeOutcome={(outcome: VisitOutcome) => {
+                // A reason chosen for another outcome may not apply to this one.
+                const allowed = VisitEntity.failureReasonsFor(outcome);
+                const kept =
+                  draft.failureReason && allowed?.includes(draft.failureReason)
+                    ? draft.failureReason
+                    : null;
+                updateDraft(visit.id, { outcome, failureReason: kept });
+              }}
+              onChangeFailureReason={(failureReason) => updateDraft(visit.id, { failureReason })}
               onChangeNotes={(notes) => updateDraft(visit.id, { notes })}
               onTakePhoto={() => void takePhoto()}
               onCompleteBilling={openBilling}
@@ -344,6 +428,12 @@ export default function VisitScreen() {
                 label={es.visits.fields.outcome}
                 value={visit.outcome ? es.visits.outcomes[visit.outcome] : null}
               />
+              {visit.failureReason ? (
+                <DetailRow
+                  label={es.visits.fields.failureReason}
+                  value={es.visits.failureReasons[visit.failureReason]}
+                />
+              ) : null}
               <DetailRow label={es.visits.fields.notes} value={visit.notes} isLast />
             </Card>
           ) : null}
@@ -357,11 +447,20 @@ export default function VisitScreen() {
               variant="warning"
               title={es.visits.statuses.CANCELLED}
               message={
-                visit.cancellationReason
-                  ? `${es.visits.fields.cancellationReason}: ${visit.cancellationReason}`
+                visit.failureReason || visit.cancellationReason
+                  ? `${es.visits.fields.cancellationReason}: ${[
+                      visit.failureReason && es.visits.failureReasons[visit.failureReason],
+                      visit.cancellationReason,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}`
                   : es.visits.toasts.cancelled
               }
             />
+          ) : null}
+
+          {holdsSeller ? (
+            <AlertBanner variant="warning" message={es.visits.followUp.required} />
           ) : null}
 
           {visit.isClosed() && canManage ? (
@@ -378,7 +477,7 @@ export default function VisitScreen() {
                 testID="visit-schedule-next"
                 variant="secondary"
                 leftIcon={<CalendarPlus size={16} color={colors.secondaryForeground} />}
-                onPress={scheduleNext}
+                onPress={() => scheduleNext()}
               >
                 {es.visits.actions.scheduleNext}
               </Button>
@@ -397,15 +496,27 @@ export default function VisitScreen() {
                   {es.visits.actions.reschedule}
                 </Button>
               ) : null}
-              <Button
-                testID="visit-cancel"
-                variant="ghost"
-                leftIcon={<XCircle size={16} color={colors.destructive} />}
-                textClassName="text-destructive"
-                onPress={() => setOpenSheet('cancel')}
-              >
-                {es.visits.actions.cancel}
-              </Button>
+              {isMine && visit.canPostpone() ? (
+                <Button
+                  testID="visit-postpone"
+                  variant="outline"
+                  leftIcon={<Hourglass size={16} color={colors.foreground} />}
+                  onPress={() => setOpenSheet('postpone')}
+                >
+                  {es.visits.actions.postpone}
+                </Button>
+              ) : null}
+              {visit.canCancel() ? (
+                <Button
+                  testID="visit-cancel"
+                  variant="ghost"
+                  leftIcon={<XCircle size={16} color={colors.destructive} />}
+                  textClassName="text-destructive"
+                  onPress={() => setOpenSheet('cancel')}
+                >
+                  {es.visits.actions.cancel}
+                </Button>
+              ) : null}
             </View>
           ) : null}
         </ScrollView>
@@ -415,10 +526,24 @@ export default function VisitScreen() {
 
       <RescheduleVisitSheet
         visit={visit}
+        routeDates={routeDates}
         open={openSheet === 'reschedule'}
         onClose={() => setOpenSheet(null)}
         onConfirm={reschedule}
         isSubmitting={isRescheduling}
+      />
+      <PostponeVisitSheet
+        open={openSheet === 'postpone'}
+        onClose={() => setOpenSheet(null)}
+        onConfirm={postpone}
+        isSubmitting={isPostponing}
+      />
+      <LoseCustomerSheet
+        open={openSheet === 'lose'}
+        isProspect={!customerIsActive}
+        onClose={() => setOpenSheet(null)}
+        onConfirm={complete}
+        isSubmitting={isCheckingOut}
       />
       <CancelVisitSheet
         open={openSheet === 'cancel'}

@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /**
  * Local (offline) database. Mirrors the seller's working set downloaded by
@@ -73,6 +73,9 @@ export const visits = sqliteTable(
     photoUrl: text('photo_url'),
     photoLocalUri: text('photo_local_uri'),
     cancellationReason: text('cancellation_reason'),
+    failureReason: text('failure_reason'),
+    postponedAt: text('postponed_at'),
+    postponedUntil: text('postponed_until'),
     sellerId: text('seller_id').notNull(),
     sellerName: text('seller_name'),
     createdById: text('created_by_id').notNull(),
@@ -145,6 +148,16 @@ export const zones = sqliteTable('zones', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
 });
+
+/** The seller's weekly route: every pull brings the full list and replaces this one. */
+export const routeDays = sqliteTable(
+  'route_days',
+  {
+    weekday: integer('weekday').notNull(),
+    zoneId: text('zone_id').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.weekday, table.zoneId] })],
+);
 
 export const promotions = sqliteTable('promotions', {
   id: text('id').primaryKey(),

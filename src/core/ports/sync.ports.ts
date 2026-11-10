@@ -8,6 +8,7 @@ import type { VisitEntity } from '../entities/visit.entity';
 import type { CollectionsSettings } from '../types/collection.types';
 import type { Category, Promotion } from '../types/catalog.types';
 import type { Zone } from '../types/customer.types';
+import type { RouteDay } from '../types/route.types';
 import type { CustomerProduct } from '../types/customer-product.types';
 import type {
   OutboxOperation,
@@ -67,6 +68,8 @@ export interface SyncChangeSet {
   promotions: Promotion[];
   /** Full list of active zones: replaces the local one (null on servers before zones). */
   zones: Zone[] | null;
+  /** The seller's full weekly route: replaces the local one (null on older servers). */
+  routeDays: RouteDay[] | null;
   receivables: ReceivableEntity[];
   payments: PaymentEntity[];
   /** What each customer buys; replaces the local rows with the same id. */

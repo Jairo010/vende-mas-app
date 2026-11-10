@@ -26,6 +26,63 @@ export const OUTCOMES_BY_TYPE: Readonly<Record<VisitType, readonly VisitOutcome[
   COLLECTION: ['COLLECTED', 'PARTIALLY_COLLECTED', 'NOT_COLLECTED'],
 };
 
+/** Why a visit failed: a fixed list, the same for every company (API ADR 0036). */
+const ATTENTION_REASONS = ['STORE_CLOSED', 'CONTACT_UNAVAILABLE', 'WRONG_ADDRESS'] as const;
+const SALES_REASONS = [
+  'HAS_STOCK',
+  'NO_BUDGET',
+  'PRICE_TOO_HIGH',
+  'BUYS_FROM_COMPETITOR',
+  'PRODUCT_UNAVAILABLE',
+  'NOT_INTERESTED',
+] as const;
+const COLLECTION_REASONS = [
+  'PROMISED_LATER',
+  'NO_FUNDS',
+  'INVOICE_DISPUTED',
+  'ALREADY_PAID',
+] as const;
+const CANCELLATION_REASONS = ['NO_TIME_ON_ROUTE', 'CUSTOMER_ASKED_OTHER_DATE'] as const;
+
+export const VISIT_FAILURE_REASONS = [
+  ...ATTENTION_REASONS,
+  ...SALES_REASONS,
+  ...COLLECTION_REASONS,
+  ...CANCELLATION_REASONS,
+  'OTHER',
+] as const;
+export type VisitFailureReason = (typeof VISIT_FAILURE_REASONS)[number];
+
+/** Outcomes that say the visit achieved nothing: the seller must tell why (same rule as the API). */
+export const FAILURE_REASONS_BY_OUTCOME: Readonly<
+  Partial<Record<VisitOutcome, readonly VisitFailureReason[]>>
+> = {
+  NOT_INTERESTED: [...ATTENTION_REASONS, ...SALES_REASONS, 'OTHER'],
+  NO_ORDER: [...ATTENTION_REASONS, ...SALES_REASONS, 'OTHER'],
+  NOT_COLLECTED: [...ATTENTION_REASONS, ...COLLECTION_REASONS, 'OTHER'],
+};
+
+export const CANCELLATION_FAILURE_REASONS: readonly VisitFailureReason[] = [
+  ...ATTENTION_REASONS,
+  ...CANCELLATION_REASONS,
+  'OTHER',
+];
+
+/**
+ * The customer does not want to be sold to (API ADR 0038): the visit needs no next one and the
+ * customer is lost. Any other reason, even with a "not interested" outcome, leaves the door open.
+ */
+export function losesCustomer(reason: VisitFailureReason | null | undefined): boolean {
+  return reason === 'NOT_INTERESTED';
+}
+
+/** Fewest characters (without surrounding spaces) that count as notes when closing a visit. */
+export const MIN_VISIT_NOTES_LENGTH = 5;
+
+export function hasValidVisitNotes(notes: string | null | undefined): boolean {
+  return (notes?.trim().length ?? 0) >= MIN_VISIT_NOTES_LENGTH;
+}
+
 /** Only invoiceable (ACTIVE) customers can receive order or collection visits (API rule). */
 export const VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER: readonly VisitType[] = ['ORDER', 'COLLECTION'];
 
@@ -69,7 +126,10 @@ export interface StartVisitInput {
 export interface CompleteVisitInput {
   outcome: VisitOutcome;
   location?: GeoPoint;
-  notes?: string;
+  /** Always required, whatever the outcome. */
+  notes: string;
+  /** Required for the outcomes in `FAILURE_REASONS_BY_OUTCOME`, refused for any other. */
+  failureReason?: VisitFailureReason;
   /** Photo taken on the device (store front); uploaded before the push. */
   photoLocalUri?: string;
 }
@@ -82,6 +142,15 @@ export interface RescheduleVisitInput {
   notes?: string;
 }
 
+export interface PostponeVisitInput {
+  /** Why the seller must come back. */
+  notes: string;
+  /** ISO instant the customer mentioned, if any: only a reminder. */
+  returnAt?: string;
+}
+
 export interface CancelVisitInput {
-  reason?: string;
+  failureReason: VisitFailureReason;
+  /** The notes of the cancellation: what happened, in words. */
+  reason: string;
 }

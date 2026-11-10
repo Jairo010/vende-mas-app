@@ -45,6 +45,13 @@ export function RouteMap({ plan, items, onSelect }: RouteMapProps) {
     [plan],
   );
 
+  // The provider's drive does not reach the visits left for later: straight dashes to them.
+  const laterPath = useMemo<GeoPoint[]>(() => {
+    if (!plan.encodedPolyline || plan.postponedFrom === undefined) return [];
+    const from = plan.legs[plan.postponedFrom - 1]?.point ?? plan.origin;
+    return [from, ...plan.legs.slice(plan.postponedFrom).map((leg) => leg.point)];
+  }, [plan]);
+
   const markersKey = items.map((item) => `${item.visit.id}:${item.position}`).join('|');
   useEffect(() => {
     setTracksViewChanges(true);
@@ -87,6 +94,14 @@ export function RouteMap({ plan, items, onSelect }: RouteMapProps) {
           strokeColor={colors.primary}
           strokeWidth={4}
           lineDashPattern={plan.encodedPolyline ? undefined : [10, 8]}
+        />
+      ) : null}
+      {laterPath.length > 1 ? (
+        <Polyline
+          coordinates={laterPath}
+          strokeColor={colors.primary}
+          strokeWidth={4}
+          lineDashPattern={[10, 8]}
         />
       ) : null}
 

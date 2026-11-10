@@ -46,6 +46,9 @@ export interface VisitResponseDto {
   durationMinutes: number | null;
   photoUrl: string | null;
   cancellationReason: string | null;
+  failureReason?: string | null;
+  postponedAt?: string | null;
+  postponedUntil?: string | null;
   sellerId: string;
   createdById: string;
   customerId: string;
@@ -79,7 +82,8 @@ export interface CompleteVisitRequestDto {
   outcome: string;
   endedAt?: string;
   location?: CheckpointLocationDto;
-  notes?: string;
+  notes: string;
+  failureReason?: string;
   photoUrl?: string;
 }
 
@@ -90,8 +94,16 @@ export interface RescheduleVisitRequestDto {
   notes?: string;
 }
 
+/** `POST /visits/:id/postpone` (sync: VISIT POSTPONE). */
+export interface PostponeVisitRequestDto {
+  notes: string;
+  returnAt?: string;
+  postponedAt?: string;
+}
+
 /** `POST /visits/:id/cancel` (sync: VISIT CANCEL). */
 export interface CancelVisitRequestDto {
-  reason?: string;
+  failureReason: string;
+  reason: string;
   cancelledAt?: string;
 }

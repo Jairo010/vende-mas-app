@@ -1,9 +1,11 @@
 import { VisitEntity } from '@/core/entities/visit.entity';
 import {
+  VISIT_FAILURE_REASONS,
   VISIT_OUTCOMES,
   VISIT_STATUSES,
   VISIT_TYPES,
   type VisitCheckpoint,
+  type VisitFailureReason,
   type VisitOutcome,
 } from '@/core/types/visit.types';
 import type { VisitCheckpointDto, VisitResponseDto } from '@/infrastructure/api/dto/visit.dto';
@@ -44,6 +46,11 @@ export class VisitMapper {
       photoUrl: dto.photoUrl,
       photoLocalUri: null,
       cancellationReason: dto.cancellationReason,
+      failureReason: dto.failureReason
+        ? pickEnum<VisitFailureReason | null>(dto.failureReason, VISIT_FAILURE_REASONS, null)
+        : null,
+      postponedAt: dto.postponedAt ?? null,
+      postponedUntil: dto.postponedUntil ?? null,
       sellerId: dto.sellerId,
       sellerName: dto.seller?.name ?? null,
       createdById: dto.createdById,

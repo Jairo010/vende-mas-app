@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
-import type { VisitEntity } from '@/core/entities/visit.entity';
+import { VisitEntity } from '@/core/entities/visit.entity';
 import { CustomerNotFoundError } from '@/core/errors/customer.errors';
 import {
   VisitAlreadyInProgressError,
@@ -14,6 +14,7 @@ import {
   VISIT_TYPES_REQUIRING_ACTIVE_CUSTOMER,
   type CancelVisitInput,
   type CompleteVisitInput,
+  type PostponeVisitInput,
   type RescheduleVisitInput,
   type ScheduleVisitInput,
   type StartVisitInput,
@@ -22,6 +23,7 @@ import {
 import { distanceInMeters } from '@/core/value-objects/geo-distance';
 import type {
   CancelVisitRequestDto,
+  PostponeVisitRequestDto,
   CompleteVisitRequestDto,
   RescheduleVisitRequestDto,
   ScheduleVisitRequestDto,
@@ -238,6 +240,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
       if (visit.needsStorePhoto(customerHasPhoto) && !input.photoLocalUri) {
         throw new VisitStorePhotoRequiredError();
       }
+      VisitEntity.assertCompletionDetails(input.outcome, input.notes, input.failureReason);
 
       const durationMinutes = visit.start
         ? Math.max(0, Math.round((now.getTime() - new Date(visit.start.at).getTime()) / 60_000))
@@ -252,7 +255,8 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           endLongitude: input.location?.longitude ?? null,
           endAccuracyMeters: input.location?.accuracyMeters ?? null,
           durationMinutes,
-          notes: input.notes ?? visit.notes,
+          notes: input.notes,
+          failureReason: input.failureReason ?? null,
           photoLocalUri: input.photoLocalUri ?? null,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
@@ -274,6 +278,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         endedAt: toZonedIsoString(now),
         location: toLocationDto(input.location),
         notes: input.notes,
+        failureReason: input.failureReason,
       };
       this.enqueue(tx, id, 'COMPLETE', compact(payload), now, photoId);
 
@@ -296,6 +301,8 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
           scheduledAt,
           hasScheduledTime,
           notes: input.notes ?? visit.notes,
+          postponedAt: null,
+          postponedUntil: null,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
         })
@@ -320,11 +327,13 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     return this.ctx.db().transaction((tx) => {
       const visit = this.loadOrThrow(tx, id);
       visit.assertCanCancel();
+      VisitEntity.assertCancellationDetails(input.failureReason, input.reason);
 
       tx.update(visits)
         .set({
           status: 'CANCELLED',
-          cancellationReason: input.reason ?? null,
+          cancellationReason: input.reason,
+          failureReason: input.failureReason,
           syncStatus: 'PENDING',
           updatedAt: nowIso,
         })
@@ -332,6 +341,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         .run();
 
       const payload: CancelVisitRequestDto = {
+        failureReason: input.failureReason,
         reason: input.reason,
         cancelledAt: toZonedIsoString(now),
       };
@@ -341,10 +351,47 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
     });
   }
 
+  public async postpone(id: string, input: PostponeVisitInput): Promise<VisitEntity> {
+    const now = this.ctx.now();
+    const nowIso = now.toISOString();
+    const returnAt = input.returnAt ? new Date(input.returnAt).toISOString() : null;
+
+    return this.ctx.db().transaction((tx) => {
+      const visit = this.loadOrThrow(tx, id);
+      visit.assertCanPostpone(input.notes);
+
+      // The check-in stays in the trail on the server; these fields wait for the next one.
+      tx.update(visits)
+        .set({
+          status: 'SCHEDULED',
+          startedAt: null,
+          startLatitude: null,
+          startLongitude: null,
+          startAccuracyMeters: null,
+          distanceToCustomerMeters: null,
+          postponedAt: nowIso,
+          postponedUntil: returnAt,
+          syncStatus: 'PENDING',
+          updatedAt: nowIso,
+        })
+        .where(eq(visits.id, id))
+        .run();
+
+      const payload: PostponeVisitRequestDto = {
+        notes: input.notes,
+        returnAt: returnAt ? toZonedIsoString(returnAt) : undefined,
+        postponedAt: toZonedIsoString(now),
+      };
+      this.enqueue(tx, id, 'POSTPONE', compact(payload), now);
+
+      return this.loadOrThrow(tx, id);
+    });
+  }
+
   private enqueue(
     tx: DbExecutor,
     visitId: string,
-    action: 'SCHEDULE' | 'START' | 'COMPLETE' | 'RESCHEDULE' | 'CANCEL',
+    action: 'SCHEDULE' | 'START' | 'COMPLETE' | 'RESCHEDULE' | 'CANCEL' | 'POSTPONE',
     payload: Record<string, unknown>,
     now: Date,
     photoId: string | null = null,

@@ -32,6 +32,8 @@ the server).
   optimal — including the drawn polyline. Adding, cancelling or completing a visit out of
   order, or a store getting a new location, recomputes from the current position. "Recalcular"
   forces it.
+- **Update (ADR 0014)**: a stop gone from the middle no longer recomputes: it is patched on the
+  device. Visits left for later go last, outside the optimized plan.
 - **Map**: `react-native-maps` (Google Maps SDK on Android — free, unlimited; Apple Maps on
   iPhone — no key). Numbered markers colored by visit type, the Google polyline (dashed straight
   lines when estimated), dark theme from the palette (`theme/map-style.ts`, hex derived from

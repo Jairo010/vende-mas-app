@@ -5,6 +5,7 @@ import type { RouteLeg } from '@/core/types/route.types';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { es } from '@/shared/i18n/es';
+import { postponedLabel } from '../visits/postponed-label';
 import { useThemeColors } from '@/theme';
 import { formatDistance } from '../visits/location-quality';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from '../visits/visit-visuals';
@@ -33,6 +34,7 @@ export function RouteStopRow({
 }: RouteStopRowProps) {
   const colors = useThemeColors();
   const type = VISIT_TYPE_VISUALS[visit.type];
+  const postponed = postponedLabel(visit);
 
   return (
     <Pressable
@@ -63,6 +65,7 @@ export function RouteStopRow({
         <View className="mt-1.5 flex-row flex-wrap items-center gap-1.5">
           {isNext ? <Badge size="sm" variant="primary" label={es.route.next} /> : null}
           <Badge size="sm" variant={type.badgeVariant} label={type.label} />
+          {postponed ? <Badge size="sm" variant="warning" label={postponed} /> : null}
           {visit.status === 'IN_PROGRESS' ? (
             <Badge
               size="sm"

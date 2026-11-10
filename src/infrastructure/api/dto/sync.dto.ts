@@ -59,6 +59,8 @@ export interface SyncPullResponseDto {
   promotions: PromotionResponseDto[];
   /** Absent on servers before zones. */
   zones?: { id: string; name: string; isActive: boolean }[];
+  /** Absent on servers before route days. */
+  routeDays?: { weekday: number; zoneId: string }[];
   /** Absent on servers without collections. */
   receivables?: ReceivableResponseDto[];
   payments?: CollectionPaymentResponseDto[];

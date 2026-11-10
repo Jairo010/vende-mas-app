@@ -21,6 +21,7 @@ import {
   promotions,
   receivableInstallments,
   receivables,
+  routeDays,
   syncMeta,
   visits,
   zones,
@@ -123,6 +124,10 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
         tx.delete(zones).run();
         if (changes.zones.length > 0) tx.insert(zones).values(changes.zones).run();
       }
+      if (changes.routeDays) {
+        tx.delete(routeDays).run();
+        if (changes.routeDays.length > 0) tx.insert(routeDays).values(changes.routeDays).run();
+      }
 
       // A receivable with payments not yet accepted keeps its local balance: the server's
       // copy does not include them yet (the seller must not collect twice).
@@ -197,6 +202,7 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
         categories,
         promotions,
         zones,
+        routeDays,
         customerProducts,
         outbox,
         pendingPhotos,

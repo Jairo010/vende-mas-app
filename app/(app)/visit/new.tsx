@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useTeamSellers } from '@/application/hooks/team/use-team-sellers';
+import { useRouteDays } from '@/application/hooks/route/use-route-days';
 import { useScheduleVisit } from '@/application/hooks/visits/use-schedule-visit';
+import {
+  isRouteDay,
+  nextRouteDayFrom,
+  quickVisitDates,
+  routeWeekdaysOf,
+} from '@/application/route/route-days';
 import { VISIT_TYPES, type VisitType } from '@/core/types/visit.types';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { notify } from '@/presentation/components/feedback/toast';
@@ -20,7 +27,8 @@ import { ScheduleStep } from '@/presentation/features/visits/new-visit/schedule-
 import { VisitTypeStep } from '@/presentation/features/visits/new-visit/visit-type-step';
 import { WizardProgress } from '@/presentation/features/visits/new-visit/wizard-progress';
 import { es } from '@/shared/i18n/es';
-import { todayKey, toLocalTime, zonedInstant, type DateKey } from '@/shared/utils/date';
+import { addDays, todayKey, toLocalTime, zonedInstant, type DateKey } from '@/shared/utils/date';
+import { useVisitDraftStore } from '@/stores/visit-draft.store';
 
 const STEP_TITLES = [
   es.newVisit.steps.type,
@@ -60,19 +68,24 @@ function suggestedTime(date: DateKey): string {
 
 /**
  * New visit wizard: type → customer (search, or a prospect created on the spot) → date,
- * optional time, seller and notes. Also used to schedule the follow-up of a visit.
+ * optional time, seller and notes. A seller only picks the route days of the customer (API ADR
+ * 0038). The next visit of a finished one opens on the date, one week ahead (app ADR 0015).
  */
 export default function NewVisitScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<NewVisitParams>();
-  const { isAdmin, isSupervisor } = useAuthSession();
+  const { isAdmin, isSupervisor, isSeller } = useAuthSession();
   const canAssignSeller = isAdmin || isSupervisor;
   const isFollowUp = Boolean(params.parentVisitId);
+  // Type and customer come from the finished visit: straight to the date.
+  const firstStep = isFollowUp ? LAST_STEP : 0;
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(firstStep);
   const [type, setType] = useState<VisitType | null>(() => parseType(params.type));
   const [selection, setSelection] = useState<CustomerSelection | null>(null);
   const [date, setDate] = useState<DateKey>(() => initialDate(params.date));
+  // Until the seller picks one, the date follows the customer's route days.
+  const [dateChosen, setDateChosen] = useState(false);
   // No time by default: the visit is planned for the day; the real start/end are recorded.
   const [time, setTime] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -82,6 +95,26 @@ export default function NewVisitScreen() {
   const { customer: presetCustomer } = useCustomer(params.customerId);
   const { sellers, isError: teamUnavailable } = useTeamSellers(canAssignSeller);
   const { scheduleVisit, isPending } = useScheduleVisit();
+  const { routeDays } = useRouteDays();
+  const clearFollowUp = useVisitDraftStore((state) => state.clearFollowUp);
+
+  const today = todayKey();
+  // The next visit is another day: today is the visit just finished.
+  const minDate = isFollowUp ? addDays(today, 1) : today;
+  const zoneId = selection?.kind === 'existing' ? selection.customer.zoneId : null;
+  // Admins and supervisors plan the routes: only a seller is held to the days of theirs.
+  const weekdays = useMemo(
+    () => (isSeller ? routeWeekdaysOf(zoneId, routeDays) : []),
+    [isSeller, zoneId, routeDays],
+  );
+  const quickDates = quickVisitDates(today, weekdays);
+  const scheduledDate = dateChosen
+    ? date
+    : isFollowUp
+      ? quickDates.WEEK
+      : nextRouteDayFrom(date < minDate ? minDate : date, weekdays);
+  const isDateEnabled =
+    weekdays.length > 0 ? (day: DateKey) => isRouteDay(day, weekdays) : undefined;
 
   // Follow-up / visit from a customer: preselect it once it is read from the device.
   useEffect(() => {
@@ -109,16 +142,20 @@ export default function NewVisitScreen() {
       ? type !== null
       : step === 1
         ? type !== null && isSelectionAllowed(type, selection)
-        : true;
+        : selection !== null;
 
   const submit = async () => {
     if (!type || !selection) return;
-    if (time === null && date < todayKey()) {
+    if (scheduledDate < minDate) {
       setScheduleError(es.newVisit.pastDayError);
       return;
     }
+    if (!isRouteDay(scheduledDate, weekdays)) {
+      setScheduleError(es.newVisit.notRouteDayError);
+      return;
+    }
     // Without a time the visit is stored at the local midnight of its day.
-    const instant = zonedInstant(date, time ?? '00:00');
+    const instant = zonedInstant(scheduledDate, time ?? '00:00');
     if (time !== null && instant.getTime() <= Date.now()) {
       setScheduleError(es.newVisit.pastDateError);
       return;
@@ -151,6 +188,12 @@ export default function NewVisitScreen() {
         });
       }
       notify.success(es.visits.toasts.scheduled, es.visits.toasts.queued);
+      // The finished visit no longer holds the seller (app ADR 0015): back to the agenda.
+      if (isFollowUp && useVisitDraftStore.getState().pendingFollowUpId === params.parentVisitId) {
+        clearFollowUp();
+        router.dismissTo('/(app)/(tabs)/agenda');
+        return;
+      }
       router.back();
     } catch (error) {
       notify.error(error);
@@ -162,7 +205,7 @@ export default function NewVisitScreen() {
     else void submit();
   };
 
-  const back = () => (step > 0 ? setStep(step - 1) : router.back());
+  const back = () => (step > firstStep ? setStep(step - 1) : router.back());
 
   return (
     <View className="flex-1 bg-background">
@@ -194,12 +237,16 @@ export default function NewVisitScreen() {
 
           {step === 2 ? (
             <ScheduleStep
-              date={date}
+              date={scheduledDate}
+              minDate={minDate}
+              quickDates={quickDates}
+              isDateEnabled={isDateEnabled}
               time={time}
-              suggestedTime={suggestedTime(date)}
+              suggestedTime={suggestedTime(scheduledDate)}
               notes={notes}
               onChangeDate={(value) => {
                 setDate(value);
+                setDateChosen(true);
                 setScheduleError(null);
               }}
               onChangeTime={(value) => {
@@ -219,7 +266,7 @@ export default function NewVisitScreen() {
 
         <StickyFooter>
           <View className="flex-row gap-2">
-            {step > 0 ? (
+            {step > firstStep ? (
               <Button variant="outline" className="flex-1" onPress={back}>
                 {es.common.back}
               </Button>

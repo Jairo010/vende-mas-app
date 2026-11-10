@@ -8,6 +8,8 @@ export * from './store-photo-field';
 export * from './outcome-selector';
 export * from './reschedule-visit-sheet';
 export * from './cancel-visit-sheet';
+export * from './postpone-visit-sheet';
+export * from './postponed-label';
 export * from './visit-in-progress-banner';
 export * from './visit-schedule';
 export * from './optional-time-field';

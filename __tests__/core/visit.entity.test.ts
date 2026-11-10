@@ -1,6 +1,8 @@
+import { isPostponedOn } from '@/application/route/route-plan';
 import { VisitEntity, type VisitProps } from '@/core/entities/visit.entity';
 import {
   VisitInvalidTransitionError,
+  VisitNotesRequiredError,
   VisitOutcomeNotAllowedError,
 } from '@/core/errors/visit.errors';
 import { calculateOrderLine, calculateOrderTotals, roundMoney } from '@/core/value-objects/money';
@@ -34,6 +36,26 @@ function visit(overrides: Partial<VisitProps> = {}): VisitEntity {
     ...overrides,
   });
 }
+
+describe('VisitEntity come back later', () => {
+  it('needs a check-in and notes', () => {
+    const inProgress = visit({ status: 'IN_PROGRESS' });
+    expect(inProgress.canPostpone()).toBe(true);
+    expect(visit().canPostpone()).toBe(false);
+    expect(() => visit().assertCanPostpone('Está ocupado')).toThrow(VisitInvalidTransitionError);
+    expect(() => inProgress.assertCanPostpone('no')).toThrow(VisitNotesRequiredError);
+    expect(() => inProgress.assertCanPostpone('Está ocupado')).not.toThrow();
+  });
+
+  it('counts only on the local day it was asked, and only while it is open', () => {
+    // 23:30 in Ecuador on the 14th, already the 15th in UTC.
+    const postponed = { postponedAt: '2026-10-15T04:30:00.000Z' };
+    expect(isPostponedOn(visit(postponed), '2026-10-14')).toBe(true);
+    expect(isPostponedOn(visit(postponed), '2026-10-15')).toBe(false);
+    expect(isPostponedOn(visit(), '2026-10-14')).toBe(false);
+    expect(isPostponedOn(visit({ ...postponed, status: 'COMPLETED' }), '2026-10-14')).toBe(false);
+  });
+});
 
 describe('VisitEntity state machine', () => {
   it('allows SCHEDULED → IN_PROGRESS → COMPLETED', () => {

@@ -7,12 +7,16 @@ import { customers, orders, outbox, payments, pendingPhotos, visits } from './sc
 /** The database or an open transaction (both expose the same synchronous query API). */
 export type DbExecutor = Pick<AppDatabase, 'select' | 'insert' | 'update' | 'delete'>;
 
-/** Actions that can happen only once per entity: their key is deterministic. */
-const ONE_SHOT_ACTIONS = new Set(['CREATE', 'SCHEDULE', 'START', 'COMPLETE', 'CANCEL', 'PROMOTE']);
+/**
+ * Actions that can happen only once per entity: their key is deterministic. Not START: a visit
+ * left for later is checked in again, and a fixed key would drop that one as a duplicate.
+ */
+const ONE_SHOT_ACTIONS = new Set(['CREATE', 'SCHEDULE', 'COMPLETE', 'CANCEL', 'PROMOTE']);
 
 /**
- * Idempotency key of a queued operation, e.g. `visit-start-<visitId>`. Repeatable
- * actions (UPDATE, RESCHEDULE) get a unique suffix. The key never changes across retries.
+ * Idempotency key of a queued operation, e.g. `visit-complete-<visitId>`. Repeatable
+ * actions (UPDATE, RESCHEDULE, START, POSTPONE) get a unique suffix. The key never changes across
+ * retries: it is stored with the queued operation.
  */
 export function buildIdempotencyKey(
   entityType: SyncEntityType,

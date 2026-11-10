@@ -6,6 +6,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { es } from '@/shared/i18n/es';
 import { formatTime } from '@/shared/utils/date';
 import { useThemeColors } from '@/theme';
+import { postponedLabel } from './postponed-label';
 import { formatVisitTime } from './visit-schedule';
 import { VISIT_STATUS_VISUALS, VISIT_TYPE_VISUALS } from './visit-visuals';
 
@@ -46,6 +47,7 @@ export function VisitCard({
   const TypeIcon = type.icon;
   const scheduledTime = formatVisitTime(visit);
   const times = actualTimes(visit);
+  const postponed = postponedLabel(visit);
 
   return (
     <Pressable
@@ -90,6 +92,7 @@ export function VisitCard({
         <View className="mt-2 flex-row flex-wrap items-center gap-2">
           {showType ? <Badge size="sm" variant={type.badgeVariant} label={type.label} /> : null}
           <Badge size="sm" variant={status.badgeVariant} label={status.label} />
+          {postponed ? <Badge size="sm" variant="warning" label={postponed} /> : null}
           {visit.syncStatus !== 'SYNCED' ? (
             <CloudUpload
               testID="visit-pending-sync"

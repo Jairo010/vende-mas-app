@@ -4,7 +4,7 @@ import { VisitEntity } from '@/core/entities/visit.entity';
 import type { OrderEntity } from '@/core/entities/order.entity';
 import type { PaymentEntity } from '@/core/entities/payment.entity';
 import type { ReceivableEntity } from '@/core/entities/receivable.entity';
-import type { VisitOutcome } from '@/core/types/visit.types';
+import type { VisitFailureReason, VisitOutcome } from '@/core/types/visit.types';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { Input } from '@/presentation/components/ui/input';
@@ -12,6 +12,7 @@ import type { VisitDraft } from '@/stores/visit-draft.store';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
 import { CollectionPanel } from '../collections/collection-panel';
+import { FailureReasonSelector } from './failure-reason-selector';
 import { OutcomeSelector } from './outcome-selector';
 import { StorePhotoField } from './store-photo-field';
 import { VisitOrdersCard } from './visit-orders-card';
@@ -20,6 +21,8 @@ const MAX_NOTES_LENGTH = 2000;
 
 export interface VisitWorkErrors {
   outcome?: string;
+  failureReason?: string;
+  notes?: string;
   photo?: string;
 }
 
@@ -34,6 +37,7 @@ export interface VisitWorkPanelProps {
   errors: VisitWorkErrors;
   isCapturingPhoto: boolean;
   onChangeOutcome: (outcome: VisitOutcome) => void;
+  onChangeFailureReason: (reason: VisitFailureReason) => void;
   onChangeNotes: (notes: string) => void;
   onTakePhoto: () => void;
   onCompleteBilling: () => void;
@@ -54,6 +58,7 @@ export function VisitWorkPanel({
   errors,
   isCapturingPhoto,
   onChangeOutcome,
+  onChangeFailureReason,
   onChangeNotes,
   onTakePhoto,
   onCompleteBilling,
@@ -64,6 +69,7 @@ export function VisitWorkPanel({
   const colors = useThemeColors();
   const closingSale =
     draft.outcome !== null && VisitEntity.outcomeRequiresActiveCustomer(draft.outcome);
+  const failureReasons = draft.outcome ? VisitEntity.failureReasonsFor(draft.outcome) : null;
 
   return (
     <View className="gap-4">
@@ -80,20 +86,21 @@ export function VisitWorkPanel({
         </Card>
       ) : null}
 
-      {visit.type === 'ORDER' ? (
-        <VisitOrdersCard
-          orders={orders}
-          onTakeOrder={onTakeOrder}
-          description={es.visits.order.description}
-        />
-      ) : null}
-
       {visit.type === 'COLLECTION' ? (
         <CollectionPanel
           customerId={visit.customerId}
           visitId={visit.id}
           onCollect={onCollect}
           onOpenPayment={onOpenPayment}
+        />
+      ) : null}
+
+      {/* A collection is also a chance to sell: one stop for both jobs. */}
+      {visit.type === 'ORDER' || visit.type === 'COLLECTION' ? (
+        <VisitOrdersCard
+          orders={orders}
+          onTakeOrder={onTakeOrder}
+          description={es.visits.order.description}
         />
       ) : null}
 
@@ -105,6 +112,17 @@ export function VisitWorkPanel({
           error={errors.outcome}
         />
       </Card>
+
+      {failureReasons ? (
+        <Card className="p-4">
+          <FailureReasonSelector
+            reasons={failureReasons}
+            value={draft.failureReason}
+            onChange={onChangeFailureReason}
+            error={errors.failureReason}
+          />
+        </Card>
+      ) : null}
 
       {closingSale && !customerIsActive ? (
         <Card className="gap-3 border-warning/40 p-4">
@@ -135,8 +153,9 @@ export function VisitWorkPanel({
       <Card className="p-4">
         <Input
           testID="visit-notes"
-          label={es.visits.fields.notes}
+          label={es.visits.notesRequiredLabel}
           placeholder={es.visits.notesPlaceholder}
+          error={errors.notes}
           value={draft.notes}
           onChangeText={onChangeNotes}
           maxLength={MAX_NOTES_LENGTH}

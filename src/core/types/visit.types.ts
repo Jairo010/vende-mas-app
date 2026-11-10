@@ -68,6 +68,14 @@ export const CANCELLATION_FAILURE_REASONS: readonly VisitFailureReason[] = [
   'OTHER',
 ];
 
+/**
+ * The customer does not want to be sold to (API ADR 0038): the visit needs no next one and the
+ * customer is lost. Any other reason, even with a "not interested" outcome, leaves the door open.
+ */
+export function losesCustomer(reason: VisitFailureReason | null | undefined): boolean {
+  return reason === 'NOT_INTERESTED';
+}
+
 /** Fewest characters (without surrounding spaces) that count as notes when closing a visit. */
 export const MIN_VISIT_NOTES_LENGTH = 5;
 

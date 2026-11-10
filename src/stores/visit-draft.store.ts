@@ -21,8 +21,15 @@ export const EMPTY_VISIT_DRAFT: VisitDraft = {
 
 interface VisitDraftState {
   drafts: Record<string, VisitDraft>;
+  /**
+   * Visit just finished whose next visit is not scheduled yet (app ADR 0015): the seller cannot
+   * leave it, not even by closing the app.
+   */
+  pendingFollowUpId: string | null;
   updateDraft: (visitId: string, patch: Partial<VisitDraft>) => void;
   clearDraft: (visitId: string) => void;
+  requireFollowUp: (visitId: string) => void;
+  clearFollowUp: () => void;
   clearAll: () => void;
 }
 
@@ -34,6 +41,7 @@ export const useVisitDraftStore = create<VisitDraftState>()(
   persist(
     (set) => ({
       drafts: {},
+      pendingFollowUpId: null,
       updateDraft: (visitId, patch) =>
         set((state) => ({
           drafts: {
@@ -47,12 +55,17 @@ export const useVisitDraftStore = create<VisitDraftState>()(
           const { [visitId]: _removed, ...rest } = state.drafts;
           return { drafts: rest };
         }),
-      clearAll: () => set({ drafts: {} }),
+      requireFollowUp: (visitId) => set({ pendingFollowUpId: visitId }),
+      clearFollowUp: () => set({ pendingFollowUpId: null }),
+      clearAll: () => set({ drafts: {}, pendingFollowUpId: null }),
     }),
     {
       name: 'visit-drafts',
       storage: createJSONStorage(() => zustandMmkvStorage),
-      partialize: (state) => ({ drafts: state.drafts }),
+      partialize: (state) => ({
+        drafts: state.drafts,
+        pendingFollowUpId: state.pendingFollowUpId,
+      }),
     },
   ),
 );

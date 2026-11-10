@@ -51,6 +51,31 @@ describe('Date & Time Pickers', () => {
       expect(onClose).toHaveBeenCalled();
     });
 
+    it('only lets the enabled days be picked (route days, app ADR 0015)', async () => {
+      const onConfirm = jest.fn();
+      // 2026-09-17 is a Thursday: only Thursdays.
+      const thursdays = (date: string) => new Date(`${date}T12:00:00Z`).getUTCDay() === 4;
+
+      const utils = await render(
+        <DatePickerModal
+          visible={true}
+          initialDate="2026-09-17"
+          isDateEnabled={thursdays}
+          onConfirm={onConfirm}
+          onClose={jest.fn()}
+        />,
+      );
+
+      expect(utils.getByTestId('date-day-2026-09-18').props.accessibilityState?.disabled).toBe(
+        true,
+      );
+      await fireEvent.press(utils.getByTestId('date-day-2026-09-18'));
+      await fireEvent.press(utils.getByTestId('date-day-2026-09-24'));
+      await fireEvent.press(utils.getByTestId('confirm-date-btn'));
+
+      expect(onConfirm).toHaveBeenCalledWith('2026-09-24');
+    });
+
     it('changes date on preset selection', async () => {
       const onConfirm = jest.fn();
       const onClose = jest.fn();

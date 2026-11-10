@@ -298,6 +298,16 @@ export const es = {
     followUp: {
       title: '¿Cuándo vuelves?',
       description: 'Agenda la próxima visita a este cliente.',
+      required: 'Agenda la próxima visita para salir de esta visita.',
+    },
+    lose: {
+      title: '¿Al cliente ya no le interesa?',
+      description: (isProspect: boolean) =>
+        `Se finaliza sin agendar otra visita. El cliente quedará como «${
+          isProspect ? 'Rechazó' : 'Cortó relación'
+        }», sale de tu ruta y tu administrador lo verá en el CRM.`,
+      confirm: 'Sí, finalizar sin agendar',
+      keep: 'Volver',
     },
     reschedule: {
       title: 'Reprogramar visita',
@@ -328,6 +338,7 @@ export const es = {
       cancelled: 'Visita cancelada',
       postponed: 'La visita pasó al final de tu ruta',
       scheduled: 'Visita agendada',
+      lost: 'Tu administrador verá en el CRM que este cliente ya no está interesado.',
       queued: 'Se enviará al servidor cuando haya conexión.',
     },
   },
@@ -384,6 +395,10 @@ export const es = {
     submit: 'Agendar visita',
     pastDateError: 'Elige una fecha y hora futuras',
     pastDayError: 'Elige hoy o una fecha futura',
+    quickDates: { WEEK: '1 semana', TWO_WEEKS: '2 semanas', MONTH: '1 mes' },
+    quickDate: (label: string, day: string) => `${label} · ${day}`,
+    routeDaysHint: 'Solo los días de tu ruta con este cliente.',
+    notRouteDayError: 'Elige uno de los días de tu ruta con este cliente',
   },
   customers: {
     title: 'Clientes',

@@ -1,7 +1,7 @@
 import { businessConfig } from '@/shared/config/business-config';
 import { type DateKey, zonedInstant } from './local-date';
 
-type FormatKind = 'date' | 'dateTime' | 'time' | 'dayLabel';
+type FormatKind = 'date' | 'dateTime' | 'time' | 'dayLabel' | 'shortDay';
 
 const OPTIONS: Readonly<Record<FormatKind, Intl.DateTimeFormatOptions>> = {
   date: { day: 'numeric', month: 'short', year: 'numeric' },
@@ -15,6 +15,7 @@ const OPTIONS: Readonly<Record<FormatKind, Intl.DateTimeFormatOptions>> = {
   },
   time: { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' },
   dayLabel: { weekday: 'long', day: 'numeric', month: 'long' },
+  shortDay: { weekday: 'short', day: 'numeric', month: 'short' },
 };
 
 /** Formatters in the company locale and zone, built once per combination. */
@@ -51,6 +52,11 @@ export function formatDateTime(instant: Date | string | number): string {
 export function formatTime(instant: Date | string | number): string {
   const date = new Date(instant);
   return isValid(date) ? formatter('time').format(date) : '';
+}
+
+/** `lun, 16 nov` (for a local calendar day). */
+export function formatShortDay(key: DateKey): string {
+  return formatter('shortDay').format(zonedInstant(key, '12:00'));
 }
 
 /** `martes, 14 de octubre` (for a local calendar day). */

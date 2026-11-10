@@ -60,6 +60,8 @@ export interface DatePickerFieldProps {
   onChange: (date: string) => void;
   placeholder?: string;
   minDate?: string | null;
+  /** Days that can be picked; the others are disabled in the calendar. */
+  isDateEnabled?: (date: string) => boolean;
   error?: string;
   testID?: string;
   className?: string;
@@ -71,6 +73,7 @@ export function DatePickerField({
   onChange,
   placeholder = 'Seleccionar fecha...',
   minDate,
+  isDateEnabled,
   error,
   testID = 'date-picker-field',
   className = '',
@@ -117,6 +120,7 @@ export function DatePickerField({
         visible={isOpen}
         initialDate={value}
         minDate={minDate}
+        isDateEnabled={isDateEnabled}
         title={label || 'Seleccionar Fecha'}
         onConfirm={onChange}
         onClose={() => setIsOpen(false)}

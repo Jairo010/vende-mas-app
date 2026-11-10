@@ -9,6 +9,8 @@ export interface DatePickerModalProps {
   visible: boolean;
   initialDate?: string | null;
   minDate?: string | null;
+  /** Days that can be picked; the others stay visible but disabled (e.g. off the route). */
+  isDateEnabled?: (date: string) => boolean;
   title?: string;
   onConfirm: (date: string) => void;
   onClose: () => void;
@@ -42,6 +44,7 @@ export function DatePickerModal({
   visible,
   initialDate,
   minDate,
+  isDateEnabled,
   title = 'Seleccionar Fecha',
   onConfirm,
   onClose,
@@ -153,7 +156,8 @@ export function DatePickerModal({
       const dayStr = String(d).padStart(2, '0');
       const iso = `${viewYear}-${monthStr}-${dayStr}`;
 
-      const isDisabled = minDate ? iso < minDate : false;
+      const isDisabled =
+        (minDate ? iso < minDate : false) || (isDateEnabled ? !isDateEnabled(iso) : false);
       const isToday = iso === todayIso;
 
       days.push({
@@ -167,7 +171,7 @@ export function DatePickerModal({
     }
 
     return days;
-  }, [viewYear, viewMonth, minDate, todayIso]);
+  }, [viewYear, viewMonth, minDate, isDateEnabled, todayIso]);
 
   const handleSelectDay = (iso: string, disabled: boolean) => {
     if (disabled || !iso) return;
@@ -218,8 +222,8 @@ export function DatePickerModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingTop: 14 }}
           >
-            {/* Quick Presets */}
-            <View className="flex-row flex-wrap gap-2 mb-4">
+            {/* Quick Presets: skipped when only some days can be picked (they would bypass it). */}
+            <View className={`flex-row flex-wrap gap-2 mb-4 ${isDateEnabled ? 'hidden' : ''}`}>
               <Pressable
                 testID="date-preset-today"
                 onPress={() => handleQuickPreset(0)}

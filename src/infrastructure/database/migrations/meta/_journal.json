@@ -64,6 +64,13 @@
       "when": 1794420785918,
       "tag": "0008_order_invoiced_at",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794427899199,
+      "tag": "0009_order_seller_number",
+      "breakpoints": true
     }
   ]
 }

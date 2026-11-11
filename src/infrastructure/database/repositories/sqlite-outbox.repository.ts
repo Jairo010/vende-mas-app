@@ -51,9 +51,14 @@ export class SqliteOutboxRepository implements IOutboxPort {
 
       if (row.entityType === 'ORDER' && row.action === 'CREATE') {
         const adjustments = OrderMapper.toPriceAdjustments(data);
-        if (adjustments.length > 0) {
+        // The official numbers right away, so the receipt can be shared before the next pull.
+        const numbers = OrderMapper.toNumbers(data);
+        if (adjustments.length > 0 || numbers) {
           tx.update(orders)
-            .set({ priceAdjustments: adjustments })
+            .set({
+              ...(adjustments.length > 0 && { priceAdjustments: adjustments }),
+              ...numbers,
+            })
             .where(eq(orders.id, row.entityId))
             .run();
         }

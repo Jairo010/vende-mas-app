@@ -21,7 +21,7 @@ export function OrderListItem({ order, onPress }: OrderListItemProps) {
     <ListItem
       testID={`order-item-${order.id}`}
       title={order.customerName ?? '—'}
-      subtitle={`${order.orderNumber ?? es.orders.receipt.pendingNumber} · ${order.itemCount()} ${es.orders.items}`}
+      subtitle={`${order.saleNumber() ?? es.orders.receipt.pendingNumber} · ${order.itemCount()} ${es.orders.items}`}
       caption={formatDateTime(order.createdAt)}
       trailing={
         <View className="items-end gap-1">

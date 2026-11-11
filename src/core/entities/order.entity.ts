@@ -21,7 +21,10 @@ export interface OrderItem {
 
 export interface OrderProps {
   id: string;
+  /** Company number (ORD-000231): internal reference. Null until the server accepts it. */
   orderNumber: string | null;
+  /** The seller's own number shown to customers (JP-00015, API ADR 0042). */
+  sellerOrderNumber: string | null;
   customerId: string;
   customerName: string | null;
   visitId: string | null;
@@ -50,6 +53,7 @@ export interface OrderProps {
 export class OrderEntity {
   public readonly id: string;
   public readonly orderNumber: string | null;
+  public readonly sellerOrderNumber: string | null;
   public readonly customerId: string;
   public readonly customerName: string | null;
   public readonly visitId: string | null;
@@ -74,6 +78,7 @@ export class OrderEntity {
   constructor(props: OrderProps) {
     this.id = props.id;
     this.orderNumber = props.orderNumber;
+    this.sellerOrderNumber = props.sellerOrderNumber;
     this.customerId = props.customerId;
     this.customerName = props.customerName;
     this.visitId = props.visitId;
@@ -109,6 +114,11 @@ export class OrderEntity {
       return null;
     }
     return this.invoiceNumber ? 'INVOICED' : 'PENDING';
+  }
+
+  /** The number people use: the seller's (JP-00015), else the company's; null before syncing. */
+  public saleNumber(): string | null {
+    return this.sellerOrderNumber ?? this.orderNumber;
   }
 
   /** Still waiting for the server (no official number yet). */

@@ -179,6 +179,7 @@ export const orders = sqliteTable(
     id: text('id').primaryKey(),
     /** Official number (ORD-000123); null until the server accepts the order. */
     orderNumber: text('order_number'),
+    sellerOrderNumber: text('seller_order_number'),
     customerId: text('customer_id').notNull(),
     customerName: text('customer_name'),
     visitId: text('visit_id'),

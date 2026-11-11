@@ -22,7 +22,7 @@ export function toWhatsAppPhone(phone: string | null | undefined): string | null
 export function buildOrderReceiptText(order: OrderEntity): string {
   const r = es.orders.receipt;
   const lines = [
-    `*${r.title} ${order.orderNumber ?? `(${r.pendingNumber})`}*`,
+    `*${r.title} ${order.saleNumber() ?? `(${r.pendingNumber})`}*`,
     `${es.orders.fields.customer}: ${order.customerName ?? '—'}`,
     `${es.orders.fields.createdAt}: ${formatDateTime(order.createdAt)}`,
   ];

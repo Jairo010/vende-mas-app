@@ -77,7 +77,7 @@ export default function OrderDetailScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader
-        title={order.orderNumber ?? es.orders.detailTitle}
+        title={order.saleNumber() ?? es.orders.detailTitle}
         subtitle={order.customerName ?? undefined}
         onBack={goBack}
       />
@@ -97,8 +97,11 @@ export default function OrderDetailScreen() {
           <View className="mt-3">
             <DetailRow
               label={es.orders.fields.number}
-              value={order.orderNumber ?? es.orders.receipt.pendingNumber}
+              value={order.saleNumber() ?? es.orders.receipt.pendingNumber}
             />
+            {order.sellerOrderNumber && order.orderNumber ? (
+              <DetailRow label={es.orders.fields.reference} value={order.orderNumber} />
+            ) : null}
             <DetailRow label={es.orders.fields.customer} value={order.customerName} />
             <DetailRow label={es.orders.fields.createdAt} value={formatDateTime(order.createdAt)} />
             <DetailRow

@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `seller_order_number` text;

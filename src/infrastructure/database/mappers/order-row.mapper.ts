@@ -14,6 +14,7 @@ export class OrderRowMapper {
     return OrderEntity.create({
       id: row.id,
       orderNumber: row.orderNumber,
+      sellerOrderNumber: row.sellerOrderNumber,
       customerId: row.customerId,
       customerName: row.customerName,
       visitId: row.visitId,
@@ -62,6 +63,7 @@ export class OrderRowMapper {
     return {
       id: entity.id,
       orderNumber: entity.orderNumber,
+      sellerOrderNumber: entity.sellerOrderNumber,
       customerId: entity.customerId,
       customerName: entity.customerName,
       visitId: entity.visitId,

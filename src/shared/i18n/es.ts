@@ -539,7 +539,9 @@ export const es = {
             ? 'Repetir última compra (1 producto)'
             : `Repetir última compra (${count} productos)`,
         repeated: (count: number) =>
-          count === 1 ? '1 producto agregado a la venta' : `${count} productos agregados a la venta`,
+          count === 1
+            ? '1 producto agregado a la venta'
+            : `${count} productos agregados a la venta`,
       },
       stock: 'Stock',
       outOfStock: 'Sin stock',
@@ -567,8 +569,7 @@ export const es = {
       notes: 'Notas de la venta',
       notesPlaceholder: 'Indicaciones de entrega, horario, contacto...',
       confirm: 'Confirmar venta',
-      estimate:
-        'Total estimado: el servidor confirma precios y promociones al registrar la venta.',
+      estimate: 'Total estimado: el servidor confirma precios y promociones al registrar la venta.',
       backToCatalog: 'Seguir agregando',
     },
     created: 'Venta guardada',
@@ -596,6 +597,7 @@ export const es = {
       createdAt: 'Fecha',
       delivery: 'Entrega',
       invoice: 'Factura',
+      reference: 'Referencia interna',
       notes: 'Notas',
     },
     receipt: {

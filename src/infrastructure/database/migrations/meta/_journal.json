@@ -57,6 +57,13 @@
       "when": 1793986912808,
       "tag": "0007_route_days",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794420785918,
+      "tag": "0008_order_invoiced_at",
+      "breakpoints": true
     }
   ]
 }

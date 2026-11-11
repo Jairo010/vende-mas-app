@@ -206,6 +206,7 @@ describe('SqliteSyncStoreRepository', () => {
       notes: null,
       billingSyncStatus: 'EXPORTED',
       invoiceNumber: null,
+      invoicedAt: null,
       priceAdjustments: [],
       items: [
         {

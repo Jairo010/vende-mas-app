@@ -580,6 +580,11 @@ export const es = {
       schedule: 'Cuotas',
       everyWeek: 'cada semana',
     },
+    invoiceStates: {
+      invoiced: 'Facturada',
+      pending: 'Por facturar',
+    },
+    invoiceIssued: (number: string, date: string) => `${number} · ${date}`,
     priceAdjustedTitle: 'Precios ajustados',
     priceAdjustedDescription:
       'El servidor aplicó los precios vigentes a estos productos (el total ya está actualizado):',

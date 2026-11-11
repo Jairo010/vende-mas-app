@@ -32,6 +32,7 @@ export class OrderRowMapper {
       notes: row.notes,
       billingSyncStatus: row.billingSyncStatus as BillingSyncStatus,
       invoiceNumber: row.invoiceNumber,
+      invoicedAt: row.invoicedAt,
       priceAdjustments: row.priceAdjustments ?? [],
       items: items.map(OrderRowMapper.toItem),
       syncStatus: row.syncStatus as LocalSyncStatus,
@@ -77,6 +78,7 @@ export class OrderRowMapper {
       notes: entity.notes,
       billingSyncStatus: entity.billingSyncStatus,
       invoiceNumber: entity.invoiceNumber,
+      invoicedAt: entity.invoicedAt,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };

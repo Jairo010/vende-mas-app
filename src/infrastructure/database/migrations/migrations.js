@@ -9,6 +9,7 @@ import m0004 from './0004_order_taking.sql';
 import m0005 from './0005_visit_failure_reason.sql';
 import m0006 from './0006_visit_postpone.sql';
 import m0007 from './0007_route_days.sql';
+import m0008 from './0008_order_invoiced_at.sql';
 
   export default {
     journal,
@@ -20,7 +21,8 @@ m0003,
 m0004,
 m0005,
 m0006,
-m0007
+m0007,
+m0008
     }
   }
   

@@ -35,7 +35,10 @@ export interface OrderProps {
   paymentPlan: PaymentPlan;
   notes: string | null;
   billingSyncStatus: BillingSyncStatus;
+  /** Set by the office when the sale is invoiced; it can be replaced if the invoice is voided. */
   invoiceNumber: string | null;
+  /** When the invoice was issued (ISO). */
+  invoicedAt: string | null;
   priceAdjustments: PriceAdjustment[];
   items: OrderItem[];
   syncStatus: LocalSyncStatus;
@@ -61,6 +64,7 @@ export class OrderEntity {
   public readonly notes: string | null;
   public readonly billingSyncStatus: BillingSyncStatus;
   public readonly invoiceNumber: string | null;
+  public readonly invoicedAt: string | null;
   public readonly priceAdjustments: PriceAdjustment[];
   public readonly items: OrderItem[];
   public readonly syncStatus: LocalSyncStatus;
@@ -84,6 +88,7 @@ export class OrderEntity {
     this.notes = props.notes;
     this.billingSyncStatus = props.billingSyncStatus;
     this.invoiceNumber = props.invoiceNumber;
+    this.invoicedAt = props.invoicedAt;
     this.priceAdjustments = props.priceAdjustments;
     this.items = props.items;
     this.syncStatus = props.syncStatus;
@@ -93,6 +98,17 @@ export class OrderEntity {
 
   public static create(props: OrderProps): OrderEntity {
     return new OrderEntity(props);
+  }
+
+  /**
+   * Whether the sale is invoiced: INVOICED with an invoice number, PENDING without one; null
+   * for drafts, cancelled orders and orders the server has not accepted yet.
+   */
+  public invoiceState(): 'INVOICED' | 'PENDING' | null {
+    if (this.status === 'DRAFT' || this.status === 'CANCELLED' || this.isPendingSync()) {
+      return null;
+    }
+    return this.invoiceNumber ? 'INVOICED' : 'PENDING';
   }
 
   /** Still waiting for the server (no official number yet). */

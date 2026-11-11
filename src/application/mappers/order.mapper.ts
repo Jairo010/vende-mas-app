@@ -32,6 +32,7 @@ export class OrderMapper {
         'NOT_REQUIRED',
       ),
       invoiceNumber: dto.invoiceNumber,
+      invoicedAt: dto.invoicedAt ?? null,
       priceAdjustments: [],
       items: dto.items.map((item) => ({ ...item })),
       syncStatus: 'SYNCED',

@@ -19,10 +19,15 @@ import { InstallmentList } from '@/presentation/features/collections/installment
 import { OrderLineRow } from '@/presentation/features/orders/order-line-row';
 import { shareOrderOnWhatsApp } from '@/presentation/features/orders/order-receipt';
 import { OrderTotals } from '@/presentation/features/orders/order-totals';
-import { ORDER_STATUS_BADGES, orderSyncBadge } from '@/presentation/features/orders/order-visuals';
+import {
+  ORDER_STATUS_BADGES,
+  orderInvoiceBadge,
+  orderSyncBadge,
+} from '@/presentation/features/orders/order-visuals';
 import { es } from '@/shared/i18n/es';
 import { formatDate, formatDateTime } from '@/shared/utils/date';
 import { formatCurrency } from '@/shared/utils/format-currency';
+import { formatInvoiceNumber } from '@/shared/utils/invoice-number';
 import { useThemeColors } from '@/theme';
 
 /**
@@ -62,6 +67,7 @@ export default function OrderDetailScreen() {
   }
 
   const syncBadge = orderSyncBadge(order);
+  const invoiceBadge = orderInvoiceBadge(order);
   const productNames = new Map(order.items.map((item) => [item.productId, item.productName]));
 
   const share = () => {
@@ -84,6 +90,9 @@ export default function OrderDetailScreen() {
               label={es.orders.statuses[order.status]}
             />
             {syncBadge ? <Badge variant={syncBadge.variant} label={syncBadge.label} /> : null}
+            {invoiceBadge ? (
+              <Badge variant={invoiceBadge.variant} label={invoiceBadge.label} />
+            ) : null}
           </View>
           <View className="mt-3">
             <DetailRow
@@ -97,7 +106,17 @@ export default function OrderDetailScreen() {
               value={order.estimatedDeliveryDate ? formatDate(order.estimatedDeliveryDate) : null}
             />
             {order.invoiceNumber ? (
-              <DetailRow label={es.orders.fields.invoice} value={order.invoiceNumber} />
+              <DetailRow
+                label={es.orders.fields.invoice}
+                value={
+                  order.invoicedAt
+                    ? es.orders.invoiceIssued(
+                        formatInvoiceNumber(order.invoiceNumber),
+                        formatDate(order.invoicedAt),
+                      )
+                    : formatInvoiceNumber(order.invoiceNumber)
+                }
+              />
             ) : null}
             <DetailRow label={es.orders.fields.notes} value={order.notes} isLast />
           </View>

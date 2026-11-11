@@ -196,6 +196,7 @@ export const orders = sqliteTable(
     notes: text('notes'),
     billingSyncStatus: text('billing_sync_status').notNull().default('NOT_REQUIRED'),
     invoiceNumber: text('invoice_number'),
+    invoicedAt: text('invoiced_at'),
     /** Lines whose price the server changed (from the push result). */
     priceAdjustments: text('price_adjustments', { mode: 'json' }).$type<
       { productId: string; expectedUnitPrice: number; unitPrice: number }[]

@@ -40,6 +40,8 @@ export interface OrderResponseDto {
   billingSyncStatus: string;
   externalId: string | null;
   invoiceNumber: string | null;
+  /** Older servers did not send it. */
+  invoicedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

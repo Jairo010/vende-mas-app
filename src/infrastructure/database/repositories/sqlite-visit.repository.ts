@@ -117,7 +117,7 @@ export class SqliteVisitRepository implements IVisitRepositoryPort {
         customer.status !== 'ACTIVE'
       ) {
         throw new VisitCustomerNotInvoiceableError(
-          'Solo los clientes activos reciben visitas de pedido o cobro',
+          'Solo los clientes activos reciben visitas de venta o cobro',
         );
       }
       if (input.parentVisitId) {

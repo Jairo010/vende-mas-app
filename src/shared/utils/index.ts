@@ -4,3 +4,4 @@ export * from './cn';
 export * from './id';
 export * from './polyline';
 export * from './maps-links';
+export * from './invoice-number';

@@ -192,6 +192,7 @@ describe('SqliteSyncStoreRepository', () => {
     const order = OrderEntity.create({
       id: 'order-1',
       orderNumber: 'ORD-000123',
+      sellerOrderNumber: 'LP-00001',
       customerId: 'customer-1',
       customerName: 'Lubricadora El Pana',
       visitId: null,
@@ -206,6 +207,7 @@ describe('SqliteSyncStoreRepository', () => {
       notes: null,
       billingSyncStatus: 'EXPORTED',
       invoiceNumber: null,
+      invoicedAt: null,
       priceAdjustments: [],
       items: [
         {

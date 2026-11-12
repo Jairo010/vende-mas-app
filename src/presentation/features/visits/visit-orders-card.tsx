@@ -9,7 +9,7 @@ import { OrderListItem } from '../orders/order-list-item';
 
 export interface VisitOrdersCardProps {
   orders: readonly OrderEntity[];
-  /** Omit to hide the "Armar pedido" button (closed visits). */
+  /** Omit to hide the "Armar venta" button (closed visits). */
   onTakeOrder?: () => void;
   description?: string;
 }

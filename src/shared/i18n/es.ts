@@ -100,7 +100,7 @@ export const es = {
   tabs: {
     agenda: 'Agenda',
     customers: 'Clientes',
-    orders: 'Pedidos',
+    orders: 'Ventas',
     more: 'Más',
   },
   agenda: {
@@ -123,7 +123,7 @@ export const es = {
     optimalRoute: 'Ver ruta óptima',
     groups: {
       OPPORTUNITY: 'Oportunidades',
-      ORDER: 'Pedidos',
+      ORDER: 'Ventas',
       COLLECTION: 'Cobros',
     },
     groupProgress: (done: number, total: number) => `${done} de ${total} hechas`,
@@ -168,7 +168,7 @@ export const es = {
     newTitle: 'Nueva visita',
     types: {
       OPPORTUNITY: 'Oportunidad',
-      ORDER: 'Pedido',
+      ORDER: 'Venta',
       COLLECTION: 'Cobro',
     },
     statuses: {
@@ -182,8 +182,8 @@ export const es = {
       NOT_INTERESTED: 'No interesado',
       FOLLOW_UP: 'Volver a visitar',
       SALE_CLOSED: 'Venta cerrada',
-      ORDER_TAKEN: 'Pedido tomado',
-      NO_ORDER: 'Sin pedido',
+      ORDER_TAKEN: 'Venta tomada',
+      NO_ORDER: 'Sin venta',
       COLLECTED: 'Cobrado',
       PARTIALLY_COLLECTED: 'Cobro parcial',
       NOT_COLLECTED: 'No cobrado',
@@ -240,7 +240,7 @@ export const es = {
       cancel: 'Cancelar visita',
       postpone: 'Cliente ocupado: volver más tarde',
       scheduleNext: 'Agendar próxima visita',
-      takeOrder: 'Armar pedido',
+      takeOrder: 'Armar venta',
       completeBilling: 'Completar datos de facturación',
       call: 'Llamar',
       openMap: 'Cómo llegar',
@@ -278,13 +278,13 @@ export const es = {
       prospectTitle: 'Para cerrar la venta faltan los datos de facturación',
       prospectDescription:
         'El prospecto pasará a cliente activo y se enviará al sistema de facturación.',
-      readyDescription: 'Arma el pedido antes de finalizar la visita.',
+      readyDescription: 'Arma la venta antes de finalizar la visita.',
     },
     order: {
-      title: 'Pedido',
-      description: 'Arma el pedido con el catálogo guardado en el teléfono.',
-      linked: 'Pedidos de esta visita',
-      none: 'Aún no hay pedidos en esta visita.',
+      title: 'Venta',
+      description: 'Arma la venta con el catálogo guardado en el teléfono.',
+      linked: 'Ventas de esta visita',
+      none: 'Aún no hay ventas en esta visita.',
     },
     readOnly: 'Solo el vendedor asignado registra la llegada y la salida de esta visita.',
     validation: {
@@ -354,13 +354,13 @@ export const es = {
     },
     typeDescriptions: {
       OPPORTUNITY: 'Presentar productos a un prospecto o cliente y buscar la venta.',
-      ORDER: 'Tomar un pedido a un cliente activo.',
+      ORDER: 'Tomar una venta a un cliente activo.',
       COLLECTION: 'Cobrar facturas pendientes a un cliente activo.',
     },
     onlyActiveHint:
-      'Las visitas de pedido y cobro son para clientes activos. Si eliges un prospecto, podrás activarlo con sus datos de facturación.',
+      'Las visitas de venta y cobro son para clientes activos. Si eliges un prospecto, podrás activarlo con sus datos de facturación.',
     prospectNeedsBilling:
-      'Este prospecto aún no está activo. Completa sus datos de facturación para agendarle un pedido o cobro.',
+      'Este prospecto aún no está activo. Completa sus datos de facturación para agendarle una venta o cobro.',
     activateProspect: 'Activar cliente',
     searchPlaceholder: 'Buscar cliente o prospecto...',
     noCustomers: 'No hay clientes que coincidan.',
@@ -458,13 +458,13 @@ export const es = {
     },
     actions: {
       newVisit: 'Nueva visita',
-      newOrder: 'Nuevo pedido',
+      newOrder: 'Nueva venta',
     },
     history: {
       visits: 'Historial de visitas',
-      orders: 'Pedidos',
+      orders: 'Ventas',
       noVisits: 'Aún no hay visitas a este cliente.',
-      noOrders: 'Aún no hay pedidos de este cliente.',
+      noOrders: 'Aún no hay ventas de este cliente.',
     },
     noStorePhoto: 'Sin foto del local',
     lookup: {
@@ -493,31 +493,31 @@ export const es = {
     },
   },
   orders: {
-    title: 'Pedidos',
-    newTitle: 'Nuevo pedido',
-    detailTitle: 'Pedido',
-    notFound: 'El pedido no está en este teléfono.',
-    emptyTitle: 'Sin pedidos',
-    emptyDescription: 'Los pedidos que tomes en tus visitas aparecerán aquí.',
+    title: 'Ventas',
+    newTitle: 'Nueva venta',
+    detailTitle: 'Venta',
+    notFound: 'La venta no está en este teléfono.',
+    emptyTitle: 'Sin ventas',
+    emptyDescription: 'Las ventas que tomes en tus visitas aparecerán aquí.',
     pendingNumber: 'Pendiente de envío',
-    rejected: 'Rechazado',
+    rejected: 'Rechazada',
     items: 'productos',
     total: 'Total',
     subtotal: 'Subtotal',
     discount: 'Descuento',
     tax: 'IVA',
-    filterAll: 'Todos',
+    filterAll: 'Todas',
     filterPending: 'Por enviar',
     statuses: {
       DRAFT: 'Borrador',
-      CONFIRMED: 'Confirmado',
+      CONFIRMED: 'Confirmada',
       PROCESSING: 'En proceso',
-      SHIPPED: 'Despachado',
-      DELIVERED: 'Entregado',
-      CANCELLED: 'Cancelado',
+      SHIPPED: 'Despachada',
+      DELIVERED: 'Entregada',
+      CANCELLED: 'Cancelada',
     },
-    chooseCustomer: '¿Para qué cliente es el pedido?',
-    onlyActive: 'Solo los clientes activos (con datos de facturación) reciben pedidos.',
+    chooseCustomer: '¿Para qué cliente es la venta?',
+    onlyActive: 'Solo los clientes activos (con datos de facturación) reciben ventas.',
     catalog: {
       searchPlaceholder: 'Ej.: pastillas spark, aceite total 20w50…',
       emptyTitle: 'Catálogo vacío',
@@ -539,7 +539,9 @@ export const es = {
             ? 'Repetir última compra (1 producto)'
             : `Repetir última compra (${count} productos)`,
         repeated: (count: number) =>
-          count === 1 ? '1 producto agregado al pedido' : `${count} productos agregados al pedido`,
+          count === 1
+            ? '1 producto agregado a la venta'
+            : `${count} productos agregados a la venta`,
       },
       stock: 'Stock',
       outOfStock: 'Sin stock',
@@ -551,27 +553,26 @@ export const es = {
       suggested: (quantity: number) => `${quantity} (como la última vez)`,
       other: 'Otra cantidad',
       confirm: 'Listo',
-      remove: 'Quitar del pedido',
+      remove: 'Quitar de la venta',
     },
     cart: {
-      review: 'Revisar pedido',
+      review: 'Revisar venta',
       empty: 'Agrega productos del catálogo.',
       overStock: 'Supera el stock disponible',
-      unavailable: 'Ya no está disponible: quítalo del pedido',
+      unavailable: 'Ya no está disponible: quítalo de la venta',
       remove: 'Quitar',
     },
     review: {
-      title: 'Revisar pedido',
+      title: 'Revisar venta',
       deliveryDate: 'Fecha de entrega',
       deliveryHint: 'Si no eliges una, se entrega en 7 días.',
-      notes: 'Notas del pedido',
+      notes: 'Notas de la venta',
       notesPlaceholder: 'Indicaciones de entrega, horario, contacto...',
-      confirm: 'Confirmar pedido',
-      estimate:
-        'Total estimado: el servidor confirma precios y promociones al registrar el pedido.',
+      confirm: 'Confirmar venta',
+      estimate: 'Total estimado: el servidor confirma precios y promociones al registrar la venta.',
       backToCatalog: 'Seguir agregando',
     },
-    created: 'Pedido guardado',
+    created: 'Venta guardada',
     paymentPlan: {
       title: 'Forma de pago',
       installments: 'Número de cuotas',
@@ -580,6 +581,11 @@ export const es = {
       schedule: 'Cuotas',
       everyWeek: 'cada semana',
     },
+    invoiceStates: {
+      invoiced: 'Facturada',
+      pending: 'Por facturar',
+    },
+    invoiceIssued: (number: string, date: string) => `${number} · ${date}`,
     priceAdjustedTitle: 'Precios ajustados',
     priceAdjustedDescription:
       'El servidor aplicó los precios vigentes a estos productos (el total ya está actualizado):',
@@ -591,10 +597,11 @@ export const es = {
       createdAt: 'Fecha',
       delivery: 'Entrega',
       invoice: 'Factura',
+      reference: 'Referencia interna',
       notes: 'Notas',
     },
     receipt: {
-      title: 'PEDIDO',
+      title: 'VENTA',
       pendingNumber: 'Pendiente de número',
       footer: 'Gracias por su compra.',
     },
@@ -620,7 +627,7 @@ export const es = {
       OVERDUE: 'Vencida',
     },
     sources: {
-      ORDER: 'Pedido',
+      ORDER: 'Venta',
       BILLING: 'Factura',
     },
     plans: {
@@ -695,7 +702,7 @@ export const es = {
     },
     overdueBlock: {
       title: 'Cliente con saldo vencido',
-      description: 'No se pueden tomar pedidos nuevos hasta cobrar lo vencido.',
+      description: 'No se pueden tomar ventas nuevas hasta cobrar lo vencido.',
     },
     validation: {
       amountRequired: 'Ingresa el monto',
@@ -756,7 +763,7 @@ export const es = {
     entities: {
       CUSTOMER: 'Cliente',
       VISIT: 'Visita',
-      ORDER: 'Pedido',
+      ORDER: 'Venta',
       PAYMENT: 'Cobro',
     },
   },

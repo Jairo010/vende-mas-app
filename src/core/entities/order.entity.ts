@@ -21,7 +21,10 @@ export interface OrderItem {
 
 export interface OrderProps {
   id: string;
+  /** Company number (ORD-000231): internal reference. Null until the server accepts it. */
   orderNumber: string | null;
+  /** The seller's own number shown to customers (JP-00015, API ADR 0042). */
+  sellerOrderNumber: string | null;
   customerId: string;
   customerName: string | null;
   visitId: string | null;
@@ -35,7 +38,10 @@ export interface OrderProps {
   paymentPlan: PaymentPlan;
   notes: string | null;
   billingSyncStatus: BillingSyncStatus;
+  /** Set by the office when the sale is invoiced; it can be replaced if the invoice is voided. */
   invoiceNumber: string | null;
+  /** When the invoice was issued (ISO). */
+  invoicedAt: string | null;
   priceAdjustments: PriceAdjustment[];
   items: OrderItem[];
   syncStatus: LocalSyncStatus;
@@ -47,6 +53,7 @@ export interface OrderProps {
 export class OrderEntity {
   public readonly id: string;
   public readonly orderNumber: string | null;
+  public readonly sellerOrderNumber: string | null;
   public readonly customerId: string;
   public readonly customerName: string | null;
   public readonly visitId: string | null;
@@ -61,6 +68,7 @@ export class OrderEntity {
   public readonly notes: string | null;
   public readonly billingSyncStatus: BillingSyncStatus;
   public readonly invoiceNumber: string | null;
+  public readonly invoicedAt: string | null;
   public readonly priceAdjustments: PriceAdjustment[];
   public readonly items: OrderItem[];
   public readonly syncStatus: LocalSyncStatus;
@@ -70,6 +78,7 @@ export class OrderEntity {
   constructor(props: OrderProps) {
     this.id = props.id;
     this.orderNumber = props.orderNumber;
+    this.sellerOrderNumber = props.sellerOrderNumber;
     this.customerId = props.customerId;
     this.customerName = props.customerName;
     this.visitId = props.visitId;
@@ -84,6 +93,7 @@ export class OrderEntity {
     this.notes = props.notes;
     this.billingSyncStatus = props.billingSyncStatus;
     this.invoiceNumber = props.invoiceNumber;
+    this.invoicedAt = props.invoicedAt;
     this.priceAdjustments = props.priceAdjustments;
     this.items = props.items;
     this.syncStatus = props.syncStatus;
@@ -93,6 +103,22 @@ export class OrderEntity {
 
   public static create(props: OrderProps): OrderEntity {
     return new OrderEntity(props);
+  }
+
+  /**
+   * Whether the sale is invoiced: INVOICED with an invoice number, PENDING without one; null
+   * for drafts, cancelled orders and orders the server has not accepted yet.
+   */
+  public invoiceState(): 'INVOICED' | 'PENDING' | null {
+    if (this.status === 'DRAFT' || this.status === 'CANCELLED' || this.isPendingSync()) {
+      return null;
+    }
+    return this.invoiceNumber ? 'INVOICED' : 'PENDING';
+  }
+
+  /** The number people use: the seller's (JP-00015), else the company's; null before syncing. */
+  public saleNumber(): string | null {
+    return this.sellerOrderNumber ?? this.orderNumber;
   }
 
   /** Still waiting for the server (no official number yet). */

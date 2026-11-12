@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `invoiced_at` text;

@@ -23,6 +23,8 @@ export interface OrderCustomerSummaryDto {
 export interface OrderResponseDto {
   id: string;
   orderNumber: string;
+  /** Older servers did not send it. */
+  sellerOrderNumber?: string | null;
   userId: string;
   customerId: string;
   visitId?: string | null;
@@ -40,6 +42,8 @@ export interface OrderResponseDto {
   billingSyncStatus: string;
   externalId: string | null;
   invoiceNumber: string | null;
+  /** Older servers did not send it. */
+  invoicedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -5,22 +5,23 @@ import { ListItem } from '@/presentation/components/ui/list-item';
 import { es } from '@/shared/i18n/es';
 import { formatDateTime } from '@/shared/utils/date';
 import { formatCurrency } from '@/shared/utils/format-currency';
-import { ORDER_STATUS_BADGES, orderSyncBadge } from './order-visuals';
+import { ORDER_STATUS_BADGES, orderInvoiceBadge, orderSyncBadge } from './order-visuals';
 
 export interface OrderListItemProps {
   order: OrderEntity;
   onPress?: (order: OrderEntity) => void;
 }
 
-/** Order row: official number (or "pending"), customer, items, date, status and total. */
+/** Order row: official number (or "pending"), customer, items, date, status, invoice and total. */
 export function OrderListItem({ order, onPress }: OrderListItemProps) {
   const syncBadge = orderSyncBadge(order);
+  const invoiceBadge = orderInvoiceBadge(order);
 
   return (
     <ListItem
       testID={`order-item-${order.id}`}
       title={order.customerName ?? '—'}
-      subtitle={`${order.orderNumber ?? es.orders.receipt.pendingNumber} · ${order.itemCount()} ${es.orders.items}`}
+      subtitle={`${order.saleNumber() ?? es.orders.receipt.pendingNumber} · ${order.itemCount()} ${es.orders.items}`}
       caption={formatDateTime(order.createdAt)}
       trailing={
         <View className="items-end gap-1">
@@ -28,11 +29,16 @@ export function OrderListItem({ order, onPress }: OrderListItemProps) {
           {syncBadge ? (
             <Badge size="sm" variant={syncBadge.variant} label={syncBadge.label} />
           ) : (
-            <Badge
-              size="sm"
-              variant={ORDER_STATUS_BADGES[order.status]}
-              label={es.orders.statuses[order.status]}
-            />
+            <View className="flex-row gap-1">
+              <Badge
+                size="sm"
+                variant={ORDER_STATUS_BADGES[order.status]}
+                label={es.orders.statuses[order.status]}
+              />
+              {invoiceBadge ? (
+                <Badge size="sm" variant={invoiceBadge.variant} label={invoiceBadge.label} />
+              ) : null}
+            </View>
           )}
         </View>
       }

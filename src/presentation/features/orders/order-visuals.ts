@@ -22,3 +22,13 @@ export function orderSyncBadge(
   if (order.isPendingSync()) return { label: es.orders.pendingNumber, variant: 'warning' };
   return null;
 }
+
+/** Whether the sale is invoiced, as a badge next to its status (null = nothing to show). */
+export function orderInvoiceBadge(
+  order: OrderEntity,
+): { label: string; variant: BadgeVariant } | null {
+  const state = order.invoiceState();
+  if (state === 'INVOICED') return { label: es.orders.invoiceStates.invoiced, variant: 'success' };
+  if (state === 'PENDING') return { label: es.orders.invoiceStates.pending, variant: 'default' };
+  return null;
+}

@@ -10,6 +10,7 @@ export class OrderMapper {
     return OrderEntity.create({
       id: dto.id,
       orderNumber: dto.orderNumber,
+      sellerOrderNumber: dto.sellerOrderNumber ?? null,
       customerId: dto.customerId,
       customerName: dto.customer?.name ?? null,
       visitId: dto.visitId ?? null,
@@ -32,12 +33,29 @@ export class OrderMapper {
         'NOT_REQUIRED',
       ),
       invoiceNumber: dto.invoiceNumber,
+      invoicedAt: dto.invoicedAt ?? null,
       priceAdjustments: [],
       items: dto.items.map((item) => ({ ...item })),
       syncStatus: 'SYNCED',
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
     });
+  }
+
+  /** Official numbers of an ORDER CREATE push result (`data`), if any. */
+  static toNumbers(
+    data: unknown,
+  ): { orderNumber: string; sellerOrderNumber: string | null } | null {
+    if (!data || typeof data !== 'object') return null;
+    const { orderNumber, sellerOrderNumber } = data as {
+      orderNumber?: unknown;
+      sellerOrderNumber?: unknown;
+    };
+    if (typeof orderNumber !== 'string' || !orderNumber) return null;
+    return {
+      orderNumber,
+      sellerOrderNumber: typeof sellerOrderNumber === 'string' ? sellerOrderNumber : null,
+    };
   }
 
   /** `priceAdjustments` of an ORDER CREATE push result (`data`), if any. */

@@ -98,6 +98,7 @@ export class CollectionRowMapper {
       notes: row.notes,
       paidAt: row.paidAt,
       allocations: row.allocations,
+      balances: row.balances ?? null,
       syncStatus: row.syncStatus as LocalSyncStatus,
     });
   }
@@ -119,6 +120,7 @@ export class CollectionRowMapper {
       notes: entity.notes,
       paidAt: entity.paidAt,
       allocations: entity.allocations,
+      balances: entity.balances,
       createdAt,
     };
   }

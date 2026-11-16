@@ -302,8 +302,22 @@ export const payments = sqliteTable(
     notes: text('notes'),
     paidAt: text('paid_at').notNull(),
     allocations: text('allocations', { mode: 'json' })
-      .$type<{ installmentId: string; installmentNumber: number; amount: number }[]>()
+      .$type<
+        {
+          installmentId: string;
+          installmentNumber: number;
+          amount: number;
+          balanceBefore?: number | null;
+        }[]
+      >()
       .notNull(),
+    /** Balances before / after (API ADR 0044); null on older payments. */
+    balances: text('balances', { mode: 'json' }).$type<{
+      receivableBefore: number;
+      receivableAfter: number;
+      customerBefore: number | null;
+      customerAfter: number | null;
+    }>(),
     syncStatus: syncStatus(),
     createdAt: text('created_at').notNull(),
   },

@@ -18,7 +18,8 @@ import {
   PAYMENT_METHODS,
   type PaymentMethod,
 } from '@/core/types/collection.types';
-import { fromCents, toCents } from '@/core/value-objects/payment-schedule';
+import { allocatePayment, fromCents, toCents } from '@/core/value-objects/payment-schedule';
+import { PaymentBalancesView } from './payment-balances';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { Chip } from '@/presentation/components/ui/chip';
@@ -97,6 +98,24 @@ export function PaymentForm({
     receivable && Number.isFinite(amount)
       ? fromCents(Math.max(0, toCents(receivable.balance) - toCents(amount)))
       : null;
+  // What the customer will see on the receipt (API ADR 0044): before → payment → after.
+  const preview = useMemo(() => {
+    if (!receivable || !Number.isFinite(amount) || toCents(amount) <= 0) return null;
+    if (toCents(amount) > toCents(receivable.balance)) return null;
+    const { allocations } = allocatePayment(receivable.installments, amount);
+    // The documents listed are the customer's open ones when they all belong to one customer.
+    const sameCustomer = receivables.every((item) => item.customerId === receivable.customerId);
+    const debtCents = receivables.reduce((sum, item) => sum + toCents(item.balance), 0);
+    return {
+      allocations,
+      balances: {
+        receivableBefore: receivable.balance,
+        receivableAfter: fromCents(toCents(receivable.balance) - toCents(amount)),
+        customerBefore: sameCustomer ? fromCents(debtCents) : null,
+        customerAfter: sameCustomer ? fromCents(Math.max(0, debtCents - toCents(amount))) : null,
+      },
+    };
+  }, [receivable, receivables, amount]);
 
   const quickAmounts = useMemo(() => {
     if (!receivable) return [];
@@ -201,7 +220,18 @@ export function PaymentForm({
             />
           ))}
         </View>
-        {remaining !== null && receivable ? (
+        {preview ? (
+          <View className="rounded-xl border border-border bg-muted/40 p-3">
+            <Text className="mb-1 text-xs font-medium uppercase text-muted-foreground">
+              {es.collections.form.preview}
+            </Text>
+            <PaymentBalancesView
+              amount={amount}
+              balances={preview.balances}
+              allocations={preview.allocations}
+            />
+          </View>
+        ) : remaining !== null && receivable ? (
           <Text className="text-xs text-muted-foreground">
             {es.collections.form.remaining}: {formatCurrency(remaining)}
           </Text>

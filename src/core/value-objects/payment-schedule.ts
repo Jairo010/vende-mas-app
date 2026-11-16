@@ -37,6 +37,8 @@ export interface InstallmentAllocation {
   installmentId: string;
   installmentNumber: number;
   amount: number;
+  /** What the installment owed before this payment (null/absent on older payments). */
+  balanceBefore?: number | null;
 }
 
 const statusOf = (amountCents: number, paidCents: number): InstallmentStatus =>
@@ -66,6 +68,7 @@ export function allocatePayment(
       installmentId: installment.id,
       installmentNumber: installment.number,
       amount: fromCents(applied),
+      balanceBefore: fromCents(due),
     });
     remaining -= applied;
   }

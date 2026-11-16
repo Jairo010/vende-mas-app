@@ -156,6 +156,18 @@ export class SqliteCollectionRepository implements ICollectionRepositoryPort {
         throw new PaymentExceedsBalanceError(money(receivable.balance));
       }
 
+      // Balances before the payment (API ADR 0044): the document and the customer's whole debt.
+      const customerBeforeCents = this.openReceivablesOf(tx, receivable.customerId).reduce(
+        (sum, item) => sum + toCents(item.balance),
+        0,
+      );
+      const balances = {
+        receivableBefore: receivable.balance,
+        receivableAfter: fromCents(toCents(receivable.balance) - toCents(input.amount)),
+        customerBefore: fromCents(customerBeforeCents),
+        customerAfter: fromCents(Math.max(0, customerBeforeCents - toCents(input.amount))),
+      };
+
       // Same rule as the server: oldest installment first.
       const { installments, allocations } = allocatePayment(receivable.installments, input.amount);
       for (const installment of installments) {
@@ -187,6 +199,7 @@ export class SqliteCollectionRepository implements ICollectionRepositoryPort {
           notes: notes ?? null,
           paidAt: nowIso,
           allocations,
+          balances,
           syncStatus: 'PENDING',
           createdAt: nowIso,
         })
@@ -260,6 +273,17 @@ export class SqliteCollectionRepository implements ICollectionRepositoryPort {
     if (METHODS_REQUIRING_BANK.includes(input.method) && !clean(input.bankName)) {
       throw new InvalidPaymentError('Ingresa el banco', { field: 'bankName' });
     }
+  }
+
+  /** The customer's open documents (sync driver: usable inside a transaction). */
+  private openReceivablesOf(db: DbExecutor, customerId: string): ReceivableEntity[] {
+    const rows = db
+      .select({ receivable: receivables, customerName: customers.tradeName })
+      .from(receivables)
+      .leftJoin(customers, eq(customers.id, receivables.customerId))
+      .where(and(eq(receivables.customerId, customerId), eq(receivables.status, 'OPEN')))
+      .all();
+    return this.withInstallments(db, rows).filter((receivable) => receivable.isOpen());
   }
 
   private load(db: DbExecutor, id: string): ReceivableEntity | null {

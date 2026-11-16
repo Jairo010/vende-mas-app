@@ -66,7 +66,20 @@ export class CollectionMapper {
       photoLocalUri: null,
       notes: dto.notes,
       paidAt: dto.paidAt,
-      allocations: dto.allocations.map((allocation) => ({ ...allocation })),
+      allocations: dto.allocations.map((allocation) => ({
+        installmentId: allocation.installmentId,
+        installmentNumber: allocation.installmentNumber,
+        amount: allocation.amount,
+        balanceBefore: allocation.balanceBefore ?? null,
+      })),
+      balances: dto.balances
+        ? {
+            receivableBefore: dto.balances.receivableBefore,
+            receivableAfter: dto.balances.receivableAfter,
+            customerBefore: dto.balances.customerBefore ?? null,
+            customerAfter: dto.balances.customerAfter ?? null,
+          }
+        : null,
       syncStatus: 'SYNCED',
     });
   }

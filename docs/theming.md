@@ -19,23 +19,24 @@ src/theme/palette.ts   (HSL triplets, light + dark)
 - ESLint forbids hex / `rgb()` / `hsl()` literals in `app/` and `src/presentation/`.
 
 ### Adding a token
+
 1. Add it to `ThemePalette` and to both schemes in `palette.ts` (camelCase, e.g. `visitOrder`).
 2. Register its kebab-case name in `tailwind.config.js` (`visit.order: token('visit-order')`).
 3. Use it: `bg-visit-order`, `text-visit-order`, or `useThemeColors().visitOrder`.
 
 ## 2. Token catalog
 
-| Token | Purpose |
-| :--- | :--- |
-| `background` / `foreground` | Screen background / primary text and icons |
-| `card`, `popover` (+ `-foreground`) | Surfaces |
-| `primary` (+ `-foreground`) | Brand action color (carmine red) |
-| `secondary`, `muted`, `accent` (+ `-foreground`) | Secondary surfaces and subdued text |
-| `destructive`, `success`, `warning`, `info` (+ `-foreground`) | Feedback states |
-| `border`, `input`, `ring` | Dividers, inputs, focus |
-| `overlay` | Backdrop of sheets and dialogs (use with alpha, e.g. `bg-overlay/60`) |
-| `visit-opportunity`, `visit-order`, `visit-collection` | Visit types (agenda dots, card accents) |
-| `status-scheduled`, `status-in-progress`, `status-completed`, `status-cancelled` | Visit statuses |
+| Token                                                                            | Purpose                                                                                  |
+| :------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------- |
+| `background` / `foreground`                                                      | Screen background / primary text and icons                                               |
+| `card`, `popover` (+ `-foreground`)                                              | Surfaces                                                                                 |
+| `primary` (+ `-foreground`)                                                      | Brand action color (carmine red)                                                         |
+| `secondary`, `muted`, `accent` (+ `-foreground`)                                 | Secondary surfaces and subdued text                                                      |
+| `destructive`, `success`, `warning`, `info` (+ `-foreground`)                    | Feedback states                                                                          |
+| `border`, `input`, `ring`                                                        | Dividers, inputs, focus                                                                  |
+| `overlay`                                                                        | Backdrop of sheets and dialogs (use with alpha, e.g. `bg-overlay/60`)                    |
+| `visit-opportunity`, `visit-order`, `visit-collection`                           | Visit types, in the hues of the web CRM: opportunity aqua, order blue, collection orange |
+| `status-scheduled`, `status-in-progress`, `status-completed`, `status-cancelled` | Visit statuses                                                                           |
 
 Opacity modifiers work on every token (`bg-primary/10`, `border-success/30`) because the
 config uses `<alpha-value>`.

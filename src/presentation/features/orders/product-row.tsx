@@ -49,7 +49,7 @@ export function ProductRow({
     <View testID={`product-row-${product.id}`} className="flex-row items-center bg-card px-4 py-3">
       <Pressable
         testID={`product-row-press-${product.id}`}
-        className="mr-3 flex-1"
+        className="mr-3 flex-1 active:opacity-60"
         accessibilityRole="button"
         accessibilityHint={es.orders.catalog.tapHint}
         onPress={() => (quantity > 0 ? onOpenQuantity?.() : add())}

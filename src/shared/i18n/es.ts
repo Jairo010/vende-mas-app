@@ -127,6 +127,8 @@ export const es = {
       COLLECTION: 'Cobros',
     },
     groupProgress: (done: number, total: number) => `${done} de ${total} hechas`,
+    dayProgressTitle: 'Avance del día',
+    dayProgress: (done: number, total: number) => `${done} de ${total} visitas`,
     previousWeek: 'Semana anterior',
     nextWeek: 'Semana siguiente',
     previousMonth: 'Mes anterior',
@@ -532,6 +534,7 @@ export const es = {
       add: 'Agregar',
       addQuantity: (quantity: number) => `Agregar ${quantity}`,
       tapHint: 'Toca para agregar; mantén presionado para elegir la cantidad',
+      howTo: 'Toca un producto para agregarlo. Mantén presionado para elegir la cantidad.',
       allProducts: 'Todo el catálogo',
       history: {
         title: (customer?: string) =>

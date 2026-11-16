@@ -176,6 +176,7 @@ export function OrderCatalog({
           onClear={() => setSearch('')}
           autoCorrect={false}
         />
+        <Text className="text-xs text-muted-foreground">{t.howTo}</Text>
       </View>
 
       <View className="mt-3 flex-1">

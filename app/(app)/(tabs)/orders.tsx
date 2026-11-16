@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Plus, ShoppingCart } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import { OfflineBanner } from '@/presentation/components/feedback/offline-banner
 import { SyncStatusPill } from '@/presentation/components/feedback/sync-status-pill';
 import { Chip } from '@/presentation/components/ui/chip';
 import { EmptyState } from '@/presentation/components/ui/empty-state';
+import { FloatingActionButton } from '@/presentation/components/ui/floating-action-button';
 import { OrderListItem } from '@/presentation/features/orders/order-list-item';
 import { es } from '@/shared/i18n/es';
 import { useThemeColors } from '@/theme';
@@ -87,15 +88,12 @@ export default function OrdersScreen() {
         }
       />
 
-      <Pressable
+      <FloatingActionButton
         testID="orders-new"
-        accessibilityRole="button"
-        accessibilityLabel={es.orders.newTitle}
+        label={es.orders.newTitle}
+        icon={<Plus size={22} color={colors.primaryForeground} />}
         onPress={() => router.push('/(app)/order/new')}
-        className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg active:opacity-90"
-      >
-        <Plus size={26} color={colors.primaryForeground} />
-      </Pressable>
+      />
     </View>
   );
 }

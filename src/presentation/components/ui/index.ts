@@ -17,3 +17,4 @@ export * from './chip';
 export * from './avatar';
 export * from './list-item';
 export * from './sticky-footer';
+export * from './floating-action-button';

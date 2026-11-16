@@ -12,7 +12,7 @@ export interface StepperProps {
   testID?: string;
 }
 
-/** Quantity selector (order lines). */
+/** Quantity selector (order lines). Its buttons are 44 px tall: they are pressed while walking. */
 export function Stepper({
   value,
   onChange,
@@ -31,14 +31,14 @@ export function Stepper({
   };
 
   return (
-    <View className="flex-row items-center rounded-xl border border-border bg-card">
+    <View className="flex-row items-center overflow-hidden rounded-xl border border-border bg-card">
       <Pressable
         testID={`${testID}-decrease`}
         accessibilityRole="button"
         accessibilityLabel="-"
         disabled={!canDecrease}
         onPress={() => change(value - step)}
-        className={`h-9 w-9 items-center justify-center ${canDecrease ? '' : 'opacity-40'}`}
+        className={`h-11 w-10 items-center justify-center active:bg-muted ${canDecrease ? '' : 'opacity-40'}`}
       >
         <Minus size={16} color={colors.foreground} />
       </Pressable>
@@ -54,7 +54,7 @@ export function Stepper({
         accessibilityLabel="+"
         disabled={!canIncrease}
         onPress={() => change(value + step)}
-        className={`h-9 w-9 items-center justify-center ${canIncrease ? '' : 'opacity-40'}`}
+        className={`h-11 w-10 items-center justify-center active:bg-muted ${canIncrease ? '' : 'opacity-40'}`}
       >
         <Plus size={16} color={colors.primary} />
       </Pressable>

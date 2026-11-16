@@ -13,6 +13,7 @@ import type {
   SyncPushOperation,
   SyncRunSummary,
 } from '@/core/types/sync.types';
+import { fullListsFootprint, hasChangedRows } from './pull-footprint';
 
 /** API limit per push (docs/sync-protocol.md). */
 export const PUSH_BATCH_SIZE = 100;
@@ -67,6 +68,8 @@ function toSyncError(error: unknown): SyncError {
 export class SyncEngine {
   private current: Promise<SyncRunSummary> | null = null;
   private readonly now: () => Date;
+  /** What the last pull said about the full-list streams, to notice when they change. */
+  private fullLists: string | null = null;
 
   constructor(private readonly deps: SyncEngineDependencies) {
     this.now = deps.now ?? (() => new Date());
@@ -91,6 +94,7 @@ export class SyncEngine {
       rejected: 0,
       pending: 0,
       pulled: false,
+      changed: false,
       error: null,
     };
 
@@ -98,14 +102,17 @@ export class SyncEngine {
       if (!(await this.deps.network.isOnline())) throw new SyncStoppedError('OFFLINE');
       const photoAttempts = await this.uploadPendingPhotos();
       await this.pushOutbox(summary, photoAttempts);
-      await this.pullChanges();
+      const downloaded = await this.pullChanges();
       summary.pulled = true;
+      summary.changed = downloaded;
       await this.deps.localStore.setLastSyncedAt(this.now().toISOString());
     } catch (error) {
       if (!(error instanceof SyncStoppedError)) throw error;
       summary.error = error.reason;
     } finally {
       summary.pending = await this.deps.outbox.countPending();
+      // Accepted and rejected operations change the sync marks of their rows.
+      if (summary.pushed > 0 || summary.rejected > 0) summary.changed = true;
     }
     return summary;
   }
@@ -213,9 +220,11 @@ export class SyncEngine {
     return { batch, blocked: false };
   }
 
-  private async pullChanges(): Promise<void> {
+  /** Returns whether the server sent anything the device did not have. */
+  private async pullChanges(): Promise<boolean> {
     let cursor = await this.deps.localStore.getCursor();
     let resetOnce = false;
+    let downloaded = false;
 
     for (let page = 0; page < MAX_PULL_PAGES; page += 1) {
       let changes;
@@ -238,7 +247,13 @@ export class SyncEngine {
       if (changes.company) this.deps.session?.updateCompany(changes.company);
       await this.deps.localStore.setCursor(changes.cursor);
       cursor = changes.cursor;
-      if (!changes.hasMore) return;
+
+      const fullLists = fullListsFootprint(changes);
+      if (hasChangedRows(changes) || fullLists !== this.fullLists) downloaded = true;
+      this.fullLists = fullLists;
+
+      if (!changes.hasMore) return downloaded;
     }
+    return downloaded;
   }
 }

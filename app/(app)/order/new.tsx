@@ -108,6 +108,9 @@ export default function NewOrderScreen() {
     setQuantity(key, base, productId, Math.max(0, quantity));
   };
 
+  const changeCatalogQuantity = (product: ProductEntity, quantity: number) =>
+    changeQuantity(product.id, quantity);
+
   const back = () => {
     if (step === 'review') setStep('catalog');
     else if (step === 'catalog' && !params.customerId) setStep('customer');
@@ -207,7 +210,7 @@ export default function NewOrderScreen() {
         <>
           <OrderCatalog
             quantities={quantities}
-            onChangeQuantity={(product, quantity) => changeQuantity(product.id, quantity)}
+            onChangeQuantity={changeCatalogQuantity}
             promotions={promotions}
             customerId={customer?.id}
             customerName={customer?.tradeName}

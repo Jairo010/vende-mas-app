@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Plus, ShoppingCart } from 'lucide-react-native';
 import { useOrders } from '@/application/hooks/orders/use-orders';
@@ -53,11 +54,10 @@ export default function OrdersScreen() {
         ))}
       </View>
 
-      <FlatList
+      <FlashList
         data={visible}
         keyExtractor={(order) => order.id}
-        className="mt-3"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 96 }}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 96 }}
         ItemSeparatorComponent={() => <View className="h-px bg-border" />}
         renderItem={({ item }) => (
           <OrderListItem

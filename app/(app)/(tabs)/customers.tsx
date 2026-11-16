@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Search, Users } from 'lucide-react-native';
 import { useCustomers } from '@/application/hooks/customers/use-customers';
@@ -71,11 +72,10 @@ export default function CustomersScreen() {
         </View>
       </View>
 
-      <FlatList
+      <FlashList
         data={customers}
         keyExtractor={(customer) => customer.id}
-        className="mt-3"
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ paddingTop: 12 }}
         ItemSeparatorComponent={() => <View className="h-px bg-border" />}
         renderItem={({ item }) => (
           <CustomerListItem customer={item} onPress={(customer) => openCustomer(customer.id)} />

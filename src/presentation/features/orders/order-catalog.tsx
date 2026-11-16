@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { SectionList, Text, View } from 'react-native';
+import { memo, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { History, PackageSearch, Repeat, Search } from 'lucide-react-native';
 import { useCartProducts } from '@/application/hooks/catalog/use-cart-products';
 import { useProducts } from '@/application/hooks/catalog/use-products';
@@ -38,10 +39,63 @@ function daysSince(isoInstant: string): number {
   return Math.max(0, Math.round(days));
 }
 
-interface CatalogSection {
-  key: 'history' | 'catalog';
-  data: ProductEntity[];
+/** Rows of the list: the two titles and the products under each. */
+type CatalogItem =
+  | { kind: 'history-header' }
+  | { kind: 'catalog-header' }
+  | { kind: 'product'; key: string; product: ProductEntity };
+
+interface CatalogProductRowProps {
+  product: ProductEntity;
+  quantity: number;
+  promotions: readonly Promotion[];
+  /** When the cart is priced: fixed while the catalog is open, so rows do not re-price. */
+  pricedAt: Date;
+  /** What the customer bought of this product, if anything. */
+  purchase?: CustomerProduct;
+  onChangeQuantity: (product: ProductEntity, quantity: number) => void;
+  onOpenQuantity: (product: ProductEntity) => void;
 }
+
+/**
+ * A product of the list. Memoized: changing one quantity renders that row again, not the whole
+ * list (ADR 0020).
+ */
+const CatalogProductRow = memo(function CatalogProductRow({
+  product,
+  quantity,
+  promotions,
+  pricedAt,
+  purchase,
+  onChangeQuantity,
+  onOpenQuantity,
+}: CatalogProductRowProps) {
+  const promotion = useMemo(
+    () => bestPromotion(product, Math.max(quantity, 1), promotions, pricedAt),
+    [product, quantity, promotions, pricedAt],
+  );
+
+  return (
+    <View className="border-b border-border">
+      <ProductRow
+        product={product}
+        quantity={quantity}
+        onChangeQuantity={(next) => onChangeQuantity(product, next)}
+        promotion={promotion}
+        suggestedQuantity={purchase?.lastQuantity}
+        hint={
+          purchase
+            ? es.orders.catalog.history.hint(
+                purchase.lastQuantity,
+                daysSince(purchase.lastPurchasedAt),
+              )
+            : undefined
+        }
+        onOpenQuantity={() => onOpenQuantity(product)}
+      />
+    </View>
+  );
+});
 
 /**
  * Offline catalog (ADR 0012): what the customer usually buys first, with "repeat last
@@ -69,7 +123,7 @@ export function OrderCatalog({
     [customerProducts],
   );
   const { products: historyProducts } = useCartProducts(historyIds);
-  const now = new Date();
+  const [pricedAt] = useState(() => new Date());
 
   const historyByProduct = useMemo(
     () => new Map<string, CustomerProduct>(customerProducts.map((row) => [row.productId, row])),
@@ -87,26 +141,26 @@ export function OrderCatalog({
     (product) => historyByProduct.get(product.id)?.inLastPurchase,
   );
 
-  // Empty sections are left out: the list then shows its empty state.
-  const sections: CatalogSection[] = (
-    isSearching
-      ? [{ key: 'catalog' as const, data: products }]
-      : [
-          { key: 'history' as const, data: history },
-          { key: 'catalog' as const, data: products },
-        ]
-  ).filter((section) => section.data.length > 0);
+  // What the customer buys first (not while searching), then the catalog.
+  const items = useMemo<CatalogItem[]>(() => {
+    const rows: CatalogItem[] = [];
+    const showHistory = !isSearching && history.length > 0;
+    if (showHistory) {
+      rows.push({ kind: 'history-header' });
+      for (const product of history) {
+        rows.push({ kind: 'product', key: `history-${product.id}`, product });
+      }
+    }
+    if (showHistory && products.length > 0) rows.push({ kind: 'catalog-header' });
+    for (const product of products) rows.push({ kind: 'product', key: product.id, product });
+    return rows;
+  }, [isSearching, history, products]);
 
   const repeatLastPurchase = () => {
     for (const product of lastPurchase) {
       onChangeQuantity(product, historyByProduct.get(product.id)?.lastQuantity ?? 1);
     }
     notify.success(t.history.repeated(lastPurchase.length));
-  };
-
-  const hintFor = (product: ProductEntity): string | undefined => {
-    const row = historyByProduct.get(product.id);
-    return row ? t.history.hint(row.lastQuantity, daysSince(row.lastPurchasedAt)) : undefined;
   };
 
   return (
@@ -124,65 +178,71 @@ export function OrderCatalog({
         />
       </View>
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(product, index) => `${product.id}-${index}`}
-        className="mt-3"
-        keyboardShouldPersistTaps="handled"
-        stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: bottomInset }}
-        ItemSeparatorComponent={() => <View className="h-px bg-border" />}
-        renderSectionHeader={({ section }) =>
-          section.key === 'history' ? (
-            <View className="gap-3 px-4 pb-3 pt-1">
-              <View className="flex-row items-center gap-2">
-                <History size={16} color={colors.primary} />
-                <Text className="flex-1 text-sm font-semibold text-foreground" numberOfLines={1}>
-                  {t.history.title(customerName)}
+      <View className="mt-3 flex-1">
+        <FlashList
+          data={items}
+          // Rows read the cart: they render again when a quantity changes.
+          extraData={quantities}
+          keyExtractor={(item) => (item.kind === 'product' ? item.key : item.kind)}
+          getItemType={(item) => item.kind}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: bottomInset }}
+          renderItem={({ item }) => {
+            if (item.kind === 'history-header') {
+              return (
+                <View className="gap-3 px-4 pb-3 pt-1">
+                  <View className="flex-row items-center gap-2">
+                    <History size={16} color={colors.primary} />
+                    <Text
+                      className="flex-1 text-sm font-semibold text-foreground"
+                      numberOfLines={1}
+                    >
+                      {t.history.title(customerName)}
+                    </Text>
+                  </View>
+                  {lastPurchase.length > 0 ? (
+                    <Button
+                      testID="order-repeat-last-purchase"
+                      variant="outline"
+                      leftIcon={<Repeat size={16} color={colors.foreground} />}
+                      onPress={repeatLastPurchase}
+                    >
+                      {t.history.repeat(lastPurchase.length)}
+                    </Button>
+                  ) : null}
+                </View>
+              );
+            }
+            if (item.kind === 'catalog-header') {
+              return (
+                <Text className="px-4 pb-2 pt-5 text-sm font-semibold text-foreground">
+                  {t.allProducts}
                 </Text>
-              </View>
-              {lastPurchase.length > 0 ? (
-                <Button
-                  testID="order-repeat-last-purchase"
-                  variant="outline"
-                  leftIcon={<Repeat size={16} color={colors.foreground} />}
-                  onPress={repeatLastPurchase}
-                >
-                  {t.history.repeat(lastPurchase.length)}
-                </Button>
-              ) : null}
-            </View>
-          ) : !isSearching && history.length > 0 ? (
-            <Text className="px-4 pb-2 pt-5 text-sm font-semibold text-foreground">
-              {t.allProducts}
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => {
-          const quantity = quantities[item.id] ?? 0;
-          const row = historyByProduct.get(item.id);
-          return (
-            <ProductRow
-              product={item}
-              quantity={quantity}
-              onChangeQuantity={(next) => onChangeQuantity(item, next)}
-              promotion={bestPromotion(item, Math.max(quantity, 1), promotions, now)}
-              suggestedQuantity={row?.lastQuantity}
-              hint={hintFor(item)}
-              onOpenQuantity={() => setSheetProduct(item)}
-            />
-          );
-        }}
-        ListEmptyComponent={
-          isLoading ? null : (
-            <EmptyState
-              icon={<PackageSearch size={32} color={colors.mutedForeground} />}
-              title={isSearching ? es.customers.noMatchesTitle : t.emptyTitle}
-              description={isSearching ? t.noMatches : t.emptyDescription}
-            />
-          )
-        }
-      />
+              );
+            }
+            return (
+              <CatalogProductRow
+                product={item.product}
+                quantity={quantities[item.product.id] ?? 0}
+                promotions={promotions}
+                pricedAt={pricedAt}
+                purchase={historyByProduct.get(item.product.id)}
+                onChangeQuantity={onChangeQuantity}
+                onOpenQuantity={setSheetProduct}
+              />
+            );
+          }}
+          ListEmptyComponent={
+            isLoading ? null : (
+              <EmptyState
+                icon={<PackageSearch size={32} color={colors.mutedForeground} />}
+                title={isSearching ? es.customers.noMatchesTitle : t.emptyTitle}
+                description={isSearching ? t.noMatches : t.emptyDescription}
+              />
+            )
+          }
+        />
+      </View>
 
       <QuantitySheet
         product={sheetProduct}

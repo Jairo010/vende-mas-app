@@ -18,9 +18,9 @@ sellers and follow them up.
 
 ### 1. Agenda (`app/(app)/(tabs)/agenda.tsx`)
 
-- `ExpandableCalendar` (week strip, expands to month, Monday first, Spanish names from
-  `es.calendar`) themed from the palette and remounted on theme change (the library caches
-  its styles).
+- A week strip that expands to the month (Monday first, Spanish names from `es.calendar`).
+  It was `ExpandableCalendar` from `react-native-calendars`; ADR 0019 replaced it with our own
+  component.
 - One SQLite query per visible month (full weeks) feeds the calendar dots (one per visit
   type, cancelled visits excluded), the day summary (scheduled / in progress / completed) and
   the day timeline.

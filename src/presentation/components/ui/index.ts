@@ -4,6 +4,8 @@ export * from './card';
 export * from './loading-spinner';
 export * from './badge';
 export * from './empty-state';
+export * from './calendar-day';
+export * from './month-grid';
 export * from './date-picker-modal';
 export * from './time-picker-modal';
 export * from './date-time-picker-field';

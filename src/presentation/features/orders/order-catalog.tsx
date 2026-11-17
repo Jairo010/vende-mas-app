@@ -3,10 +3,11 @@ import { Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { History, PackageSearch, Repeat, Search } from 'lucide-react-native';
 import { useCartProducts } from '@/application/hooks/catalog/use-cart-products';
+import { useProductFacets } from '@/application/hooks/catalog/use-product-facets';
 import { useProducts } from '@/application/hooks/catalog/use-products';
 import { useCustomerProducts } from '@/application/hooks/customers/use-customer-products';
 import type { ProductEntity } from '@/core/entities/product.entity';
-import type { Promotion } from '@/core/types/catalog.types';
+import type { ProductFilter, Promotion, SaleVehicle } from '@/core/types/catalog.types';
 import type { CustomerProduct } from '@/core/types/customer-product.types';
 import { bestPromotion } from '@/core/value-objects/order-pricing';
 import { notify } from '@/presentation/components/feedback/toast';
@@ -17,8 +18,10 @@ import { useDebouncedValue } from '@/shared/hooks/use-debounced-value';
 import { es } from '@/shared/i18n/es';
 import { todayKey, toDateKey } from '@/shared/utils/date';
 import { useThemeColors } from '@/theme';
+import { CatalogFilters } from './catalog-filters';
 import { ProductRow } from './product-row';
 import { QuantitySheet } from './quantity-sheet';
+import { hasActiveFilters, productFitLine, type SaleFilters } from './sale-filters';
 
 export interface OrderCatalogProps {
   quantities: Readonly<Record<string, number>>;
@@ -27,6 +30,12 @@ export interface OrderCatalogProps {
   /** The order's customer: what it usually buys is offered first. */
   customerId?: string;
   customerName?: string;
+  /** Family, attributes and stock filters (kept by the screen across its steps). */
+  filters: SaleFilters;
+  onChangeFilters: (filters: SaleFilters) => void;
+  /** The customer's vehicle, kept for the whole sale. */
+  vehicle: SaleVehicle | null;
+  onChangeVehicle: (vehicle: SaleVehicle | null) => void;
   /** Space for the sticky cart footer. */
   bottomInset?: number;
 }
@@ -53,6 +62,8 @@ interface CatalogProductRowProps {
   pricedAt: Date;
   /** What the customer bought of this product, if anything. */
   purchase?: CustomerProduct;
+  /** The customer's vehicle: the row names the fitment that covers it. */
+  vehicle: SaleVehicle | null;
   onChangeQuantity: (product: ProductEntity, quantity: number) => void;
   onOpenQuantity: (product: ProductEntity) => void;
 }
@@ -67,6 +78,7 @@ const CatalogProductRow = memo(function CatalogProductRow({
   promotions,
   pricedAt,
   purchase,
+  vehicle,
   onChangeQuantity,
   onOpenQuantity,
 }: CatalogProductRowProps) {
@@ -83,6 +95,7 @@ const CatalogProductRow = memo(function CatalogProductRow({
         onChangeQuantity={(next) => onChangeQuantity(product, next)}
         promotion={promotion}
         suggestedQuantity={purchase?.lastQuantity}
+        fitLine={productFitLine(product, vehicle)}
         hint={
           purchase
             ? es.orders.catalog.history.hint(
@@ -108,6 +121,10 @@ export function OrderCatalog({
   promotions,
   customerId,
   customerName,
+  filters,
+  onChangeFilters,
+  vehicle,
+  onChangeVehicle,
   bottomInset = 0,
 }: OrderCatalogProps) {
   const colors = useThemeColors();
@@ -115,8 +132,15 @@ export function OrderCatalog({
   const [search, setSearch] = useState('');
   const [sheetProduct, setSheetProduct] = useState<ProductEntity | null>(null);
   const debouncedSearch = useDebouncedValue(search);
-  const isSearching = debouncedSearch.trim() !== '';
-  const { products, isLoading } = useProducts({ search: debouncedSearch });
+  const isFiltering = hasActiveFilters(filters, vehicle);
+  // The customer's history opens the catalog; a search or a filter replaces it.
+  const isSearching = debouncedSearch.trim() !== '' || isFiltering;
+  const productFilter = useMemo<ProductFilter>(
+    () => ({ search: debouncedSearch, ...filters, ...(vehicle && { vehicle }) }),
+    [debouncedSearch, filters, vehicle],
+  );
+  const { products, isLoading } = useProducts(productFilter);
+  const { facets } = useProductFacets(productFilter);
   const { customerProducts } = useCustomerProducts(customerId);
   const historyIds = useMemo(
     () => customerProducts.map((row) => row.productId),
@@ -176,10 +200,22 @@ export function OrderCatalog({
           onClear={() => setSearch('')}
           autoCorrect={false}
         />
-        <Text className="text-xs text-muted-foreground">{t.howTo}</Text>
       </View>
 
-      <View className="mt-3 flex-1">
+      <View className="mt-3">
+        <CatalogFilters
+          filters={filters}
+          onChangeFilters={onChangeFilters}
+          vehicle={vehicle}
+          onChangeVehicle={onChangeVehicle}
+          facets={facets}
+        />
+      </View>
+      <Text className="px-4 pt-2 text-xs text-muted-foreground">
+        {isSearching ? `${es.orders.filters.results(facets.total)} · ${t.howTo}` : t.howTo}
+      </Text>
+
+      <View className="mt-2 flex-1">
         <FlashList
           data={items}
           // Rows read the cart: they render again when a quantity changes.
@@ -228,6 +264,7 @@ export function OrderCatalog({
                 promotions={promotions}
                 pricedAt={pricedAt}
                 purchase={historyByProduct.get(item.product.id)}
+                vehicle={vehicle}
                 onChangeQuantity={onChangeQuantity}
                 onOpenQuantity={setSheetProduct}
               />
@@ -238,7 +275,20 @@ export function OrderCatalog({
               <EmptyState
                 icon={<PackageSearch size={32} color={colors.mutedForeground} />}
                 title={isSearching ? es.customers.noMatchesTitle : t.emptyTitle}
-                description={isSearching ? t.noMatches : t.emptyDescription}
+                description={
+                  isFiltering
+                    ? es.orders.filters.noMatches
+                    : isSearching
+                      ? t.noMatches
+                      : t.emptyDescription
+                }
+                {...(isFiltering && {
+                  actionLabel: es.orders.filters.clear,
+                  onActionPress: () => {
+                    onChangeFilters({});
+                    onChangeVehicle(null);
+                  },
+                })}
               />
             )
           }

@@ -3,3 +3,5 @@ export * from './use-products';
 export * from './use-categories';
 export * from './use-cart-products';
 export * from './use-active-promotions';
+export * from './use-product-facets';
+export * from './use-vehicle-makes';

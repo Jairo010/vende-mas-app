@@ -8,6 +8,7 @@ import { useCustomer } from '@/application/hooks/customers/use-customer';
 import { useCreateOrder } from '@/application/hooks/orders/use-create-order';
 import { useVisit } from '@/application/hooks/visits/use-visit';
 import type { ProductEntity } from '@/core/entities/product.entity';
+import type { SaleVehicle } from '@/core/types/catalog.types';
 import { priceOrder } from '@/core/value-objects/order-pricing';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
 import { AlertBanner } from '@/presentation/components/feedback/alert-banner';
@@ -16,6 +17,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import { OrderCatalog } from '@/presentation/features/orders/order-catalog';
+import type { SaleFilters } from '@/presentation/features/orders/sale-filters';
 import { OrderCustomerPicker } from '@/presentation/features/orders/order-customer-picker';
 import { OrderReview } from '@/presentation/features/orders/order-review';
 import {
@@ -67,6 +69,13 @@ export default function NewOrderScreen() {
   const clearDraft = useOrderDraftStore((state) => state.clearDraft);
   const updateVisitDraft = useVisitDraftStore((state) => state.updateDraft);
   const quantities = useMemo(() => draft?.quantities ?? {}, [draft]);
+  // Catalog filters live here so they survive going to the review and back.
+  const [filters, setFilters] = useState<SaleFilters>({});
+  const vehicle = useOrderDraftStore((state) => (key ? state.vehicles[key] : undefined)) ?? null;
+  const setVehicle = useOrderDraftStore((state) => state.setVehicle);
+  const changeVehicle = (next: SaleVehicle | null) => {
+    if (key) setVehicle(key, next);
+  };
 
   const productIds = useMemo(() => Object.keys(quantities), [quantities]);
   const { products: cartProducts, isReady: cartReady } = useCartProducts(productIds);
@@ -214,6 +223,10 @@ export default function NewOrderScreen() {
             promotions={promotions}
             customerId={customer?.id}
             customerName={customer?.tradeName}
+            filters={filters}
+            onChangeFilters={setFilters}
+            vehicle={vehicle}
+            onChangeVehicle={changeVehicle}
             bottomInset={FOOTER_INSET}
           />
           <StickyFooter>

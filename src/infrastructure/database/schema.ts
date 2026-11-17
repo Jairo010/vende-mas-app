@@ -120,10 +120,38 @@ export const products = sqliteTable(
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     /** Normalized words the product is searched by (`buildProductSearchText`, ADR 0012). */
     searchText: text('search_text'),
+    /** Sale sheet (ADR 0021): what the product is, for the filters of the sale. */
+    family: text('family').notNull().default('OTHER'),
+    position: text('position'),
+    material: text('material'),
+    filterType: text('filter_type'),
+    viscosity: text('viscosity'),
+    oilType: text('oil_type'),
+    presentation: text('presentation'),
+    reference: text('reference'),
   },
   (table) => [
     index('products_name_idx').on(table.name),
     index('products_category_id_idx').on(table.categoryId),
+    index('products_family_idx').on(table.family),
+  ],
+);
+
+/** Vehicles each product fits (ADR 0021); replaced whenever the product is downloaded. */
+export const productFitments = sqliteTable(
+  'product_fitments',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    productId: text('product_id').notNull(),
+    make: text('make').notNull(),
+    /** Null: any model of the make. */
+    model: text('model'),
+    yearFrom: integer('year_from'),
+    yearTo: integer('year_to'),
+  },
+  (table) => [
+    index('product_fitments_product_idx').on(table.productId),
+    index('product_fitments_vehicle_idx').on(table.make, table.model),
   ],
 );
 

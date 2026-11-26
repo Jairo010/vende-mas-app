@@ -111,7 +111,10 @@ export default function NewVisitScreen() {
   const scheduledDate = dateChosen
     ? date
     : isFollowUp
-      ? quickDates.WEEK
+      ? // The next installment's day when the finished visit suggests one (ADR 0044), else a week.
+        date >= minDate
+        ? nextRouteDayFrom(date, weekdays)
+        : quickDates.WEEK
       : nextRouteDayFrom(date < minDate ? minDate : date, weekdays);
   const isDateEnabled =
     weekdays.length > 0 ? (day: DateKey) => isRouteDay(day, weekdays) : undefined;

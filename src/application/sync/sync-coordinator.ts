@@ -6,7 +6,7 @@ import { sqliteSyncStoreRepository } from '@/infrastructure/database/repositorie
 import { useSyncStore } from '@/stores/sync.store';
 import type { SyncEngine } from './sync-engine';
 import { syncEngine } from './sync-engine.instance';
-import { LOCAL_DATA_QUERY_ROOTS } from './sync.keys';
+import { LOCAL_DATA_QUERY_ROOTS, syncKeys } from './sync.keys';
 
 /** Delay that groups several quick local changes into a single push. */
 export const LOCAL_CHANGE_SYNC_DELAY_MS = 1_500;
@@ -19,7 +19,8 @@ export interface SyncCoordinatorDependencies {
 
 /**
  * Glue between the engine and the UI: runs it, publishes progress to the sync store and
- * refreshes React Query after server changes land in SQLite.
+ * refreshes React Query after server changes land in SQLite. A run that found nothing new
+ * leaves the screens alone (ADR 0020): they would only read the same rows again.
  */
 export class SyncCoordinator {
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -41,9 +42,9 @@ export class SyncCoordinator {
         lastSyncedAt: await this.deps.getLastSyncedAt(),
         lastError: summary?.error ?? (summary ? null : 'UNKNOWN'),
       });
-      await Promise.all(
-        LOCAL_DATA_QUERY_ROOTS.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-      );
+      // A run that failed half way may have stored part of its work: refresh to be safe.
+      const roots = !summary || summary.changed ? LOCAL_DATA_QUERY_ROOTS : [syncKeys.all];
+      await Promise.all(roots.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
     }
   }
 

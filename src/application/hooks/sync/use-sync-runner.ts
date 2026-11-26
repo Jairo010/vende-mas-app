@@ -8,6 +8,8 @@ import { useSyncStore } from '@/stores/sync.store';
 
 /** Background safety net: sync every few minutes while the app is open. */
 export const PERIODIC_SYNC_INTERVAL_MS = 5 * 60_000;
+/** Coming back to the app right after a sync does not start another one. */
+export const FOREGROUND_SYNC_MIN_GAP_MS = 60_000;
 
 /**
  * Keeps the device in sync while a seller is signed in. Mount it once, in the
@@ -20,7 +22,11 @@ export function useSyncRunner(
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const sync = () => void coordinator.syncNow(queryClient).catch(() => {});
+    let lastRunAt = 0;
+    const sync = () => {
+      lastRunAt = Date.now();
+      void coordinator.syncNow(queryClient).catch(() => {});
+    };
     let wasOnline = useSyncStore.getState().isOnline;
 
     void coordinator.refreshCounters().catch(() => {});
@@ -33,7 +39,8 @@ export function useSyncRunner(
     });
 
     const appStateSubscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') sync();
+      // Camera, maps or a phone call send the app to the background for a moment.
+      if (state === 'active' && Date.now() - lastRunAt >= FOREGROUND_SYNC_MIN_GAP_MS) sync();
     });
 
     const interval = setInterval(sync, PERIODIC_SYNC_INTERVAL_MS);

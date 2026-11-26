@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { SaleVehicle } from '@/core/types/catalog.types';
 import type { PaymentPlanType } from '@/core/types/collection.types';
 import type { DateKey } from '@/shared/utils/date';
 import { zustandMmkvStorage } from '@/infrastructure/storage/mmkv-storage.adapter';
@@ -24,6 +25,12 @@ export function orderDraftKey(customerId: string, visitId?: string | null): stri
 
 interface OrderDraftState {
   drafts: Record<string, OrderDraft>;
+  /**
+   * The customer's vehicle of each sale (same keys as `drafts`): it stays while the seller moves
+   * between product families, and exists before the first product is added.
+   */
+  vehicles: Record<string, SaleVehicle>;
+  setVehicle: (key: string, vehicle: SaleVehicle | null) => void;
   setQuantity: (
     key: string,
     base: Omit<OrderDraft, 'quantities' | 'notes' | 'deliveryDate' | 'paymentPlan'>,
@@ -50,6 +57,12 @@ export const useOrderDraftStore = create<OrderDraftState>()(
   persist(
     (set) => ({
       drafts: {},
+      vehicles: {},
+      setVehicle: (key, vehicle) =>
+        set((state) => {
+          const { [key]: _previous, ...rest } = state.vehicles;
+          return { vehicles: vehicle ? { ...rest, [key]: vehicle } : rest };
+        }),
       setQuantity: (key, base, productId, quantity) =>
         set((state) => {
           const draft = state.drafts[key] ?? emptyDraft(base);
@@ -66,16 +79,17 @@ export const useOrderDraftStore = create<OrderDraftState>()(
         }),
       clearDraft: (key) =>
         set((state) => {
-          if (!(key in state.drafts)) return state;
+          if (!(key in state.drafts) && !(key in state.vehicles)) return state;
           const { [key]: _removed, ...rest } = state.drafts;
-          return { drafts: rest };
+          const { [key]: _vehicle, ...vehicles } = state.vehicles;
+          return { drafts: rest, vehicles };
         }),
-      clearAll: () => set({ drafts: {} }),
+      clearAll: () => set({ drafts: {}, vehicles: {} }),
     }),
     {
       name: 'order-drafts',
       storage: createJSONStorage(() => zustandMmkvStorage),
-      partialize: (state) => ({ drafts: state.drafts }),
+      partialize: (state) => ({ drafts: state.drafts, vehicles: state.vehicles }),
     },
   ),
 );

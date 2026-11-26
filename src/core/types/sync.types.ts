@@ -87,6 +87,11 @@ export interface SyncRunSummary {
   /** Operations kept for a later run (RETRY / SKIPPED / not reached). */
   pending: number;
   pulled: boolean;
+  /**
+   * The run changed what the device stores (something was sent, rejected or downloaded):
+   * screens must read the database again. False for a run that found nothing new.
+   */
+  changed: boolean;
   /** Set when the run stopped early (offline, server down). */
   error: string | null;
 }

@@ -17,6 +17,7 @@ import {
   outbox,
   payments,
   pendingPhotos,
+  productFitments,
   products,
   promotions,
   receivableInstallments,
@@ -94,6 +95,10 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
           .values(row)
           .onConflictDoUpdate({ target: products.id, set: withoutId(row) })
           .run();
+        // The vehicles it fits always come whole with the product.
+        tx.delete(productFitments).where(eq(productFitments.productId, product.id)).run();
+        const fitments = CatalogRowMapper.toFitmentRows(product);
+        if (fitments.length > 0) tx.insert(productFitments).values(fitments).run();
       }
 
       for (const category of changes.categories) {
@@ -199,6 +204,7 @@ export class SqliteSyncStoreRepository implements ISyncLocalStorePort {
         visits,
         customers,
         products,
+        productFitments,
         categories,
         promotions,
         zones,

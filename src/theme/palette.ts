@@ -38,7 +38,10 @@ export interface ThemePalette {
   ring: string;
   /** Backdrop behind sheets and dialogs (use with alpha). */
   overlay: string;
-  /** Visit types. */
+  /**
+   * Visit types, in the hues of the web CRM (order blue, collection orange, opportunity aqua)
+   * with the lightness each background needs to be read as text (4.5:1 or more).
+   */
   visitOpportunity: string;
   visitOrder: string;
   visitCollection: string;
@@ -80,9 +83,9 @@ export const palette: Readonly<Record<ColorSchemeName, Readonly<ThemePalette>>> 
     input: '0 0% 89%',
     ring: '0 84% 50%',
     overlay: '0 0% 0%',
-    visitOpportunity: '262 83% 58%',
-    visitOrder: '160 84% 34%',
-    visitCollection: '32 95% 44%',
+    visitOpportunity: '159 73% 28%',
+    visitOrder: '213 68% 45%',
+    visitCollection: '17 82% 42%',
     statusScheduled: '217 91% 53%',
     statusInProgress: '38 92% 50%',
     statusCompleted: '142 71% 38%',
@@ -116,9 +119,9 @@ export const palette: Readonly<Record<ColorSchemeName, Readonly<ThemePalette>>> 
     input: '0 0% 18%',
     ring: '0 85% 58%',
     overlay: '0 0% 0%',
-    visitOpportunity: '258 90% 70%',
-    visitOrder: '158 64% 52%',
-    visitCollection: '38 92% 60%',
+    visitOpportunity: '159 73% 45%',
+    visitOrder: '213 77% 62%',
+    visitCollection: '17 80% 60%',
     statusScheduled: '213 94% 68%',
     statusInProgress: '38 92% 60%',
     statusCompleted: '142 69% 58%',

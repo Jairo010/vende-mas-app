@@ -33,6 +33,16 @@ export interface PaymentAllocationDto {
   installmentId: string;
   installmentNumber: number;
   amount: number;
+  /** What the installment owed before (API ADR 0044); absent on older servers / payments. */
+  balanceBefore?: number | null;
+}
+
+/** Balances before / after the payment (API ADR 0044). */
+export interface PaymentBalancesDto {
+  receivableBefore: number;
+  receivableAfter: number;
+  customerBefore?: number | null;
+  customerAfter?: number | null;
 }
 
 export interface CollectionPaymentResponseDto {
@@ -52,6 +62,7 @@ export interface CollectionPaymentResponseDto {
   billingSyncStatus: string;
   externalId: string | null;
   allocations: PaymentAllocationDto[];
+  balances?: PaymentBalancesDto | null;
   createdAt: string;
   updatedAt: string;
 }

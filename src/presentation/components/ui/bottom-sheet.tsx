@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetScrollView,
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -16,6 +17,8 @@ export interface BottomSheetProps {
   description?: string;
   /** Omit to size the sheet to its content. */
   snapPoints?: (string | number)[];
+  /** Long content (lists of options): it scrolls inside the sheet instead of being cut. */
+  scrollable?: boolean;
   children: ReactNode;
   testID?: string;
 }
@@ -30,6 +33,7 @@ export function BottomSheet({
   title,
   description,
   snapPoints,
+  scrollable = false,
   children,
   testID,
 }: BottomSheetProps) {
@@ -67,6 +71,16 @@ export function BottomSheet({
     [],
   );
 
+  const contentStyle = { paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) + 8 };
+  const header = title ? (
+    <View className="mb-4">
+      <Text className="text-lg font-bold text-foreground">{title}</Text>
+      {description ? (
+        <Text className="mt-1 text-sm text-muted-foreground">{description}</Text>
+      ) : null}
+    </View>
+  ) : null;
+
   return (
     <BottomSheetModal
       ref={ref}
@@ -78,20 +92,21 @@ export function BottomSheet({
       handleIndicatorStyle={{ backgroundColor: colors.mutedForeground, width: 40 }}
       keyboardBlurBehavior="restore"
     >
-      <BottomSheetView
-        testID={testID}
-        style={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) + 8 }}
-      >
-        {title ? (
-          <View className="mb-4">
-            <Text className="text-lg font-bold text-foreground">{title}</Text>
-            {description ? (
-              <Text className="mt-1 text-sm text-muted-foreground">{description}</Text>
-            ) : null}
-          </View>
-        ) : null}
-        {children}
-      </BottomSheetView>
+      {scrollable ? (
+        <BottomSheetScrollView
+          testID={testID}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={contentStyle}
+        >
+          {header}
+          {children}
+        </BottomSheetScrollView>
+      ) : (
+        <BottomSheetView testID={testID} style={contentStyle}>
+          {header}
+          {children}
+        </BottomSheetView>
+      )}
     </BottomSheetModal>
   );
 }

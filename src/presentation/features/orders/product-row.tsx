@@ -20,6 +20,8 @@ export interface ProductRowProps {
   suggestedQuantity?: number;
   /** Line about the customer's history ("Llevó 4 la última vez · hace 12 días"). */
   hint?: string;
+  /** What it fits ("Spark 2008-2015 · Delantera"), from its sale sheet. */
+  fitLine?: string;
   /** Opens the quick quantity sheet. */
   onOpenQuantity?: () => void;
 }
@@ -36,6 +38,7 @@ export function ProductRow({
   promotion,
   suggestedQuantity = 1,
   hint,
+  fitLine,
   onOpenQuantity,
 }: ProductRowProps) {
   const colors = useThemeColors();
@@ -49,7 +52,7 @@ export function ProductRow({
     <View testID={`product-row-${product.id}`} className="flex-row items-center bg-card px-4 py-3">
       <Pressable
         testID={`product-row-press-${product.id}`}
-        className="mr-3 flex-1"
+        className="mr-3 flex-1 active:opacity-60"
         accessibilityRole="button"
         accessibilityHint={es.orders.catalog.tapHint}
         onPress={() => (quantity > 0 ? onOpenQuantity?.() : add())}
@@ -62,6 +65,15 @@ export function ProductRow({
           {product.code}
           {product.brand ? ` · ${product.brand}` : ''} · {product.unitOfMeasure}
         </Text>
+        {fitLine ? (
+          <Text
+            testID={`product-fit-${product.id}`}
+            className="mt-0.5 text-xs font-medium text-foreground"
+            numberOfLines={1}
+          >
+            {fitLine}
+          </Text>
+        ) : null}
         <View className="mt-1.5 flex-row flex-wrap items-center gap-x-2 gap-y-1">
           <Text className="text-sm font-bold text-foreground">
             {formatCurrency(product.basePrice)}

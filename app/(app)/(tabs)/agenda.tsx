@@ -3,7 +3,6 @@ import { useCompanyModules } from '@/application/hooks/auth/use-company-modules'
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Plus, Route } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useAuthSession } from '@/application/hooks/auth/use-auth-session';
 import { isPendingForRoute } from '@/application/route/route-plan';
 import { useSyncNow } from '@/application/hooks/sync/use-sync-now';
@@ -19,6 +18,7 @@ import { OfflineBanner } from '@/presentation/components/feedback/offline-banner
 import { SyncStatusPill } from '@/presentation/components/feedback/sync-status-pill';
 import { notify } from '@/presentation/components/feedback/toast';
 import { EmptyState } from '@/presentation/components/ui/empty-state';
+import { FloatingActionButton } from '@/presentation/components/ui/floating-action-button';
 import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { AgendaCalendar } from '@/presentation/features/agenda/agenda-calendar';
 import {
@@ -43,6 +43,9 @@ import {
 } from '@/shared/utils/date';
 import { useThemeColors } from '@/theme';
 
+/** A day with this many visits or fewer shows them all at once, with no group to open. */
+const FEW_VISITS = 5;
+
 function greeting(now: Date): string {
   const hour = Number(toLocalTime(now).slice(0, 2));
   if (hour < 12) return es.agenda.greetingMorning;
@@ -64,8 +67,10 @@ export default function AgendaScreen() {
   const { user, canSeeLocationTracking } = useAuthSession();
   const [selectedDate, setSelectedDate] = useState<DateKey>(today);
   const [startingId, setStartingId] = useState<string | null>(null);
-  // Groups start collapsed: the seller opens the type they are working on.
-  const [expandedTypes, setExpandedTypes] = useState<ReadonlySet<VisitType>>(() => new Set());
+  // What the seller opened or closed by hand; the rest follows the size of the day.
+  const [toggledTypes, setToggledTypes] = useState<ReadonlyMap<VisitType, boolean>>(
+    () => new Map(),
+  );
 
   // One query per visible month: it feeds both the calendar dots and the day list.
   const month = selectedDate.slice(0, 7);
@@ -92,13 +97,11 @@ export default function AgendaScreen() {
 
   const firstName = user?.name.split(' ')[0] ?? '';
 
+  // A busy day starts with its groups closed: the seller opens the type they work on.
+  const isExpanded = (type: VisitType) => toggledTypes.get(type) ?? dayVisits.length <= FEW_VISITS;
+
   const toggleGroup = (type: VisitType) =>
-    setExpandedTypes((current) => {
-      const next = new Set(current);
-      if (next.has(type)) next.delete(type);
-      else next.add(type);
-      return next;
-    });
+    setToggledTypes((current) => new Map(current).set(type, !isExpanded(type)));
 
   const openVisit = (visit: VisitEntity) =>
     router.push({ pathname: '/(app)/visit/[id]', params: { id: visit.id } });
@@ -129,7 +132,6 @@ export default function AgendaScreen() {
   };
 
   const newVisit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     router.push({
       pathname: '/(app)/visit/new',
       params: { date: selectedDate < today ? today : selectedDate },
@@ -160,84 +162,85 @@ export default function AgendaScreen() {
       <OfflineBanner />
       {inProgress ? <VisitInProgressBanner visit={inProgress} onPress={openVisit} /> : null}
 
-      <View className="mt-3 flex-1">
-        <AgendaCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} marks={marks}>
-          {isLoading ? (
-            <View className="gap-3 p-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-            </View>
-          ) : (
-            <FlatList
-              data={groups}
-              keyExtractor={(group) => group.type}
-              contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1, paddingBottom: 96 }}
-              ListHeaderComponent={
-                <View className="gap-3">
-                  <AgendaSummary summary={summary} />
-                  {hasRouteToday && modules.has('ROUTES') ? (
-                    <Button
-                      testID="agenda-optimal-route"
-                      variant="outline"
-                      leftIcon={<Route size={16} color={colors.foreground} />}
-                      onPress={() => router.push('/(app)/route')}
-                    >
-                      {es.agenda.optimalRoute}
-                    </Button>
-                  ) : null}
-                </View>
-              }
-              renderItem={({ item: group }) => (
-                <AgendaTypeGroup
-                  group={group}
-                  expanded={expandedTypes.has(group.type)}
-                  onToggle={toggleGroup}
-                >
-                  {group.visits.map((visit) => (
-                    <VisitCard
-                      key={visit.id}
-                      visit={visit}
-                      showType={false}
-                      onPress={openVisit}
-                      onStart={canStartFromAgenda(visit) ? startVisit : undefined}
-                      isStarting={startingId === visit.id}
-                    />
-                  ))}
-                </AgendaTypeGroup>
-              )}
-              refreshControl={
-                <RefreshControl
-                  refreshing={isSyncing}
-                  onRefresh={() => void syncNow()}
-                  tintColor={colors.primary}
-                  colors={[colors.primary]}
-                  progressBackgroundColor={colors.card}
-                />
-              }
-              ListEmptyComponent={
-                <EmptyState
-                  icon={<CalendarDays size={32} color={colors.mutedForeground} />}
-                  title={es.agenda.emptyTitle}
-                  description={es.agenda.emptyDescription}
-                  actionLabel={es.agenda.newVisit}
-                  onActionPress={newVisit}
-                />
-              }
-            />
-          )}
-        </AgendaCalendar>
+      <View className="flex-1">
+        <AgendaCalendar
+          selectedDate={selectedDate}
+          today={today}
+          onDateChange={setSelectedDate}
+          marks={marks}
+        />
+        {isLoading ? (
+          <View className="gap-3 p-4">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </View>
+        ) : (
+          <FlatList
+            data={groups}
+            keyExtractor={(group) => group.type}
+            contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1, paddingBottom: 96 }}
+            ListHeaderComponent={
+              <View className="gap-3">
+                <AgendaSummary summary={summary} />
+                {hasRouteToday && modules.has('ROUTES') ? (
+                  <Button
+                    testID="agenda-optimal-route"
+                    variant="outline"
+                    leftIcon={<Route size={16} color={colors.foreground} />}
+                    onPress={() => router.push('/(app)/route')}
+                  >
+                    {es.agenda.optimalRoute}
+                  </Button>
+                ) : null}
+              </View>
+            }
+            renderItem={({ item: group }) => (
+              <AgendaTypeGroup
+                group={group}
+                expanded={isExpanded(group.type)}
+                onToggle={toggleGroup}
+              >
+                {group.visits.map((visit) => (
+                  <VisitCard
+                    key={visit.id}
+                    visit={visit}
+                    showType={false}
+                    onPress={openVisit}
+                    onStart={canStartFromAgenda(visit) ? startVisit : undefined}
+                    isStarting={startingId === visit.id}
+                  />
+                ))}
+              </AgendaTypeGroup>
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={isSyncing}
+                onRefresh={() => void syncNow()}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+                progressBackgroundColor={colors.card}
+              />
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon={<CalendarDays size={32} color={colors.mutedForeground} />}
+                title={es.agenda.emptyTitle}
+                description={es.agenda.emptyDescription}
+                actionLabel={es.agenda.newVisit}
+                onActionPress={newVisit}
+              />
+            }
+          />
+        )}
       </View>
 
-      <Pressable
+      <FloatingActionButton
         testID="agenda-new-visit"
-        accessibilityRole="button"
-        accessibilityLabel={es.agenda.newVisit}
+        label={es.agenda.newVisit}
+        icon={<Plus size={22} color={colors.primaryForeground} />}
         onPress={newVisit}
-        className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg active:opacity-90"
-      >
-        <Plus size={26} color={colors.primaryForeground} />
-      </Pressable>
+      />
     </View>
   );
 }

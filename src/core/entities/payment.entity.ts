@@ -2,6 +2,17 @@ import type { PaymentMethod } from '../types/collection.types';
 import type { LocalSyncStatus } from '../types/visit.types';
 import type { InstallmentAllocation } from '../value-objects/payment-schedule';
 
+/**
+ * What the document and the customer owed before and after the payment (API ADR 0044). The
+ * phone computes them when it is collected; the server's copy replaces them after the sync.
+ */
+export interface PaymentBalances {
+  receivableBefore: number;
+  receivableAfter: number;
+  customerBefore: number | null;
+  customerAfter: number | null;
+}
+
 export interface PaymentProps {
   id: string;
   receivableId: string;
@@ -20,6 +31,8 @@ export interface PaymentProps {
   notes: string | null;
   paidAt: string;
   allocations: InstallmentAllocation[];
+  /** Null on payments older than the balances snapshot. */
+  balances: PaymentBalances | null;
   syncStatus: LocalSyncStatus;
 }
 
@@ -42,6 +55,7 @@ export class PaymentEntity {
   public readonly notes: string | null;
   public readonly paidAt: string;
   public readonly allocations: InstallmentAllocation[];
+  public readonly balances: PaymentBalances | null;
   public readonly syncStatus: LocalSyncStatus;
 
   constructor(props: PaymentProps) {
@@ -62,6 +76,7 @@ export class PaymentEntity {
     this.notes = props.notes;
     this.paidAt = props.paidAt;
     this.allocations = props.allocations;
+    this.balances = props.balances;
     this.syncStatus = props.syncStatus;
   }
 

@@ -51,7 +51,7 @@ bought before.
   4. by name.
 
 The accounting system's category chips are removed. The filters of each product family (vehicle,
-viscosity, position, filter type) come in phase B.
+viscosity, position, filter type) came later, in ADR 0021.
 
 ### What the customer buys
 

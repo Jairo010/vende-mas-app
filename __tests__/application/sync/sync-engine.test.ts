@@ -163,7 +163,14 @@ describe('SyncEngine', () => {
       remote.push.mock.invocationCallOrder[0],
     );
     expect(localStore.setLastSyncedAt).toHaveBeenCalledWith('2026-10-14T15:00:00.000Z');
-    expect(summary).toEqual({ pushed: 2, rejected: 0, pending: 0, pulled: true, error: null });
+    expect(summary).toEqual({
+      pushed: 2,
+      rejected: 0,
+      pending: 0,
+      pulled: true,
+      changed: true,
+      error: null,
+    });
   });
 
   it('hands the company of each pull to the session (modules, zone, currency)', async () => {
@@ -342,5 +349,29 @@ describe('SyncEngine', () => {
     expect(a).toBe(b);
     expect(remote.pull).toHaveBeenCalledTimes(1);
     expect(instance.isRunning()).toBe(false);
+  });
+
+  it('reports no change when a run sends nothing and the server has nothing new', async () => {
+    outbox = new FakeOutbox([]);
+    const instance = engine();
+
+    // The first pull of a session always counts: the full lists are seen for the first time.
+    expect((await instance.run()).changed).toBe(true);
+    expect((await instance.run()).changed).toBe(false);
+  });
+
+  it('reports a change when the server sends rows or a full list differs', async () => {
+    outbox = new FakeOutbox([]);
+    const instance = engine();
+    await instance.run();
+
+    remote.pull.mockResolvedValueOnce(changes({ deletedCustomerIds: ['customer-1'] }));
+    expect((await instance.run()).changed).toBe(true);
+
+    remote.pull.mockResolvedValueOnce(changes({ zones: [{ id: 'zone-1', name: 'Centro' }] }));
+    expect((await instance.run()).changed).toBe(true);
+
+    remote.pull.mockResolvedValueOnce(changes({ zones: [{ id: 'zone-1', name: 'Centro' }] }));
+    expect((await instance.run()).changed).toBe(false);
   });
 });

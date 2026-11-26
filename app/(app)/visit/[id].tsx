@@ -30,7 +30,6 @@ import {
   losesCustomer,
   type VisitFailureReason,
   type VisitOutcome,
-  type VisitType,
 } from '@/core/types/visit.types';
 import { DetailRow } from '@/presentation/components/common/detail-row';
 import { ScreenHeader } from '@/presentation/components/common/screen-header';
@@ -55,16 +54,13 @@ import {
 } from '@/presentation/features/visits/visit-work-panel';
 import { useNow } from '@/shared/hooks/use-now';
 import { todayKey, toDateKey } from '@/shared/utils/date';
+import { suggestNextVisit } from '@/core/value-objects/next-visit';
+import { useReceivables } from '@/application/hooks/collections/use-receivables';
 import { es } from '@/shared/i18n/es';
 import { EMPTY_VISIT_DRAFT, useVisitDraftStore } from '@/stores/visit-draft.store';
 import { useThemeColors } from '@/theme';
 
 type OpenSheet = 'reschedule' | 'cancel' | 'postpone' | 'lose' | null;
-
-/** Type of the follow-up visit: after closing a sale the next visit takes the order. */
-function followUpType(visit: VisitEntity): VisitType {
-  return visit.outcome === 'SALE_CLOSED' ? 'ORDER' : visit.type;
-}
 
 /**
  * The visit, step by step: check-in (GPS) → work by type (photo, outcome, order, notes) →
@@ -100,6 +96,14 @@ export default function VisitScreen() {
   const { postponeVisit, isPending: isPostponing } = usePostponeVisit();
   const { routeDays } = useRouteDays();
   const photo = useStorePhotoCapture();
+  const receivablesFilter = useMemo(
+    () => ({ customerId: visit?.customerId, onlyOpen: true }),
+    [visit?.customerId],
+  );
+  const { receivables: openReceivables } = useReceivables(
+    receivablesFilter,
+    Boolean(visit?.customerId),
+  );
 
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -189,15 +193,26 @@ export default function VisitScreen() {
   const openPayment = (payment: { id: string }) =>
     router.push({ pathname: '/(app)/payment/[id]', params: { id: payment.id } });
 
-  const scheduleNext = (closed: VisitEntity = visit) =>
+  const scheduleNext = (closed: VisitEntity = visit) => {
+    // A collection that left something owed leads to another one on the next due date (ADR 0044).
+    const next = suggestNextVisit(
+      {
+        type: closed.type,
+        outcome: closed.outcome,
+        pendingInstallments: openReceivables.flatMap((receivable) => receivable.installments),
+      },
+      new Date(),
+    );
     router.push({
       pathname: '/(app)/visit/new',
       params: {
         customerId: closed.customerId,
-        type: followUpType(closed),
+        type: next.type,
         parentVisitId: closed.id,
+        ...(next.dueDate ? { date: toDateKey(next.dueDate) } : {}),
       },
     });
+  };
 
   const start = async () => {
     if (inProgress && inProgress.id !== visit.id) {

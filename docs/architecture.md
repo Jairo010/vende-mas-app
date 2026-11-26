@@ -87,7 +87,7 @@ Inner layers (`core` domain and `application`) must **never** depend on concrete
 | **Local database**  | `expo-sqlite` + `drizzle-orm`           | Offline-first store with migrations (ADR 0003)                        |
 | **Connectivity**    | `@react-native-community/netinfo`       | Sync triggers and offline banner                                      |
 | **Sheets / toasts** | `@gorhom/bottom-sheet`, `sonner-native` | Themed `BottomSheet` and global toasts                                |
-| **Calendar**        | `react-native-calendars`                | Agenda calendar (phase 5)                                             |
+| **Calendar**        | Own components (`AgendaCalendar`)       | Agenda week strip and month, no library (ADR 0019)                    |
 | **Maps**            | `react-native-maps`                     | Optimal route map: Google Maps (Android), Apple Maps (iOS) (ADR 0007) |
 
 ---

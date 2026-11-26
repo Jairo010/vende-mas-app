@@ -17,6 +17,8 @@ import { Skeleton } from '@/presentation/components/ui/skeleton';
 import { StickyFooter } from '@/presentation/components/ui/sticky-footer';
 import { PAYMENT_METHOD_VISUALS } from '@/presentation/features/collections/payment-method-visuals';
 import { sharePaymentOnWhatsApp } from '@/presentation/features/collections/payment-receipt';
+import { PaymentBalancesView } from '@/presentation/features/collections/payment-balances';
+import { ReceivableEntity } from '@/core/entities/receivable.entity';
 import { es } from '@/shared/i18n/es';
 import { formatDate, formatDateTime } from '@/shared/utils/date';
 import { formatCurrency } from '@/shared/utils/format-currency';
@@ -57,10 +59,13 @@ export default function PaymentDetailScreen() {
 
   const method = PAYMENT_METHOD_VISUALS[payment.method];
   const Icon = method.icon;
-  const balance = receivable?.balance ?? null;
+  const balance = payment.balances?.receivableAfter ?? receivable?.balance ?? null;
+  const pending = (receivable?.installments ?? []).filter(
+    (installment) => ReceivableEntity.remainingOf(installment) > 0,
+  );
 
   const share = () => {
-    sharePaymentOnWhatsApp(payment, balance, customer?.phone).catch((error: unknown) =>
+    sharePaymentOnWhatsApp(payment, balance, customer?.phone, pending).catch((error: unknown) =>
       notify.error(error),
     );
   };
@@ -111,21 +116,46 @@ export default function PaymentDetailScreen() {
               value={formatDate(payment.checkDate)}
             />
           ) : null}
-          <DetailRow
-            label={es.collections.receipt.installments}
-            value={payment.allocations
-              .map(
-                (allocation) =>
-                  `#${allocation.installmentNumber} ${formatCurrency(allocation.amount)}`,
-              )
-              .join(', ')}
-          />
-          <DetailRow
-            label={es.collections.receipt.balance}
-            value={balance !== null ? formatCurrency(balance) : null}
-          />
           <DetailRow label={es.collections.form.notes} value={payment.notes} isLast />
         </Card>
+
+        <Card className="gap-1 p-4">
+          <Text className="text-sm font-semibold text-foreground">
+            {es.collections.balances.title}
+          </Text>
+          <PaymentBalancesView
+            amount={payment.amount}
+            balances={payment.balances}
+            allocations={payment.allocations}
+          />
+        </Card>
+
+        {receivable ? (
+          <Card className="gap-1 p-4">
+            <Text className="text-sm font-semibold text-foreground">
+              {es.collections.balances.pendingTitle}
+            </Text>
+            {pending.length === 0 ? (
+              <Text className="text-sm text-success">{es.collections.balances.allPaid}</Text>
+            ) : (
+              pending.map((installment) => (
+                <View key={installment.id} className="flex-row items-center justify-between py-1.5">
+                  <View>
+                    <Text className="text-sm font-medium text-foreground">
+                      {es.collections.balances.installment(installment.number)}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {es.collections.balances.dueOn(formatDate(installment.dueDate))}
+                    </Text>
+                  </View>
+                  <Text className="text-sm font-bold text-foreground">
+                    {formatCurrency(ReceivableEntity.remainingOf(installment))}
+                  </Text>
+                </View>
+              ))
+            )}
+          </Card>
+        ) : null}
 
         {photo ? (
           <Image

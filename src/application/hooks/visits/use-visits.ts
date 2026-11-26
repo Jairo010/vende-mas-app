@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { VisitEntity } from '@/core/entities/visit.entity';
 import type { IVisitRepositoryPort } from '@/core/ports/visit.repository.port';
 import type { VisitFilter } from '@/core/types/visit.types';
@@ -13,6 +13,8 @@ export function useVisits(
   const query = useQuery<VisitEntity[], Error>({
     queryKey: visitsKeys.list(filter),
     queryFn: () => repository.findByRange(filter),
+    // Moving to another month keeps the list on screen while the new range is read.
+    placeholderData: keepPreviousData,
   });
 
   return {

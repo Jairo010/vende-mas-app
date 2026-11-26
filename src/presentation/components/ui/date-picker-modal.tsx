@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Button } from './button';
+import { formatMonthTitle, MonthGrid } from './month-grid';
 import { useThemeColorWithAlpha, useThemeColors } from '@/theme';
 
 export interface DatePickerModalProps {
@@ -15,23 +16,6 @@ export interface DatePickerModalProps {
   onConfirm: (date: string) => void;
   onClose: () => void;
 }
-
-const MONTH_NAMES_ES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
-
-const WEEKDAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const formatToIso = (d: Date): string => {
   const year = d.getFullYear();
@@ -50,7 +34,6 @@ export function DatePickerModal({
   onClose,
 }: DatePickerModalProps) {
   const primaryTintStrong = useThemeColorWithAlpha('primary', 0.18);
-  const primaryTintSoft = useThemeColorWithAlpha('primary', 0.1);
   const activeColors = useThemeColors();
 
   const todayIso = useMemo(() => formatToIso(new Date()), []);
@@ -121,62 +104,13 @@ export function DatePickerModal({
     setViewMonth(target.getMonth());
   };
 
-  // Calendar days computation (Monday as start of week)
-  const calendarGrid = useMemo(() => {
-    const totalDaysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    // Sunday is 0, Monday is 1 ... Saturday is 6
-    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-    // Shift so Monday is 0, Sunday is 6
-    const offset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+  const viewMonthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+  const isDayDisabled = (date: string) =>
+    (minDate ? date < minDate : false) || (isDateEnabled ? !isDateEnabled(date) : false);
 
-    const days: Array<{
-      key: string;
-      dayNumber: number;
-      isoString: string;
-      isCurrentMonth: boolean;
-      isDisabled: boolean;
-      isToday: boolean;
-    }> = [];
-
-    // Empty lead slots
-    for (let i = 0; i < offset; i++) {
-      days.push({
-        key: `empty-${i}`,
-        dayNumber: 0,
-        isoString: '',
-        isCurrentMonth: false,
-        isDisabled: true,
-        isToday: false,
-      });
-    }
-
-    // Month days
-    for (let d = 1; d <= totalDaysInMonth; d++) {
-      const monthStr = String(viewMonth + 1).padStart(2, '0');
-      const dayStr = String(d).padStart(2, '0');
-      const iso = `${viewYear}-${monthStr}-${dayStr}`;
-
-      const isDisabled =
-        (minDate ? iso < minDate : false) || (isDateEnabled ? !isDateEnabled(iso) : false);
-      const isToday = iso === todayIso;
-
-      days.push({
-        key: iso,
-        dayNumber: d,
-        isoString: iso,
-        isCurrentMonth: true,
-        isDisabled,
-        isToday,
-      });
-    }
-
-    return days;
-  }, [viewYear, viewMonth, minDate, isDateEnabled, todayIso]);
-
-  const handleSelectDay = (iso: string, disabled: boolean) => {
-    if (disabled || !iso) return;
+  const handleSelectDay = (date: string) => {
     void Haptics.selectionAsync().catch(() => {});
-    setSelectedDate(iso);
+    setSelectedDate(date);
   };
 
   const handleConfirm = () => {
@@ -304,7 +238,7 @@ export function DatePickerModal({
               </Pressable>
 
               <Text className="text-base font-bold text-foreground">
-                {MONTH_NAMES_ES[viewMonth]} {viewYear}
+                {formatMonthTitle(viewMonthKey)}
               </Text>
 
               <Pressable
@@ -316,64 +250,13 @@ export function DatePickerModal({
               </Pressable>
             </View>
 
-            {/* Weekdays Header */}
-            <View className="flex-row items-center justify-between mb-2 px-1">
-              {WEEKDAYS_ES.map((d) => (
-                <View key={d} className="flex-1 items-center">
-                  <Text className="text-xs font-bold text-muted-foreground">{d}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Days Grid */}
-            <View className="flex-row flex-wrap">
-              {calendarGrid.map((item) => {
-                if (!item.isCurrentMonth) {
-                  return <View key={item.key} className="w-[14.28%] h-11" />;
-                }
-
-                const isSelected = selectedDate === item.isoString;
-
-                return (
-                  <View key={item.key} className="w-[14.28%] h-11 p-0.5">
-                    <Pressable
-                      testID={`date-day-${item.isoString}`}
-                      disabled={item.isDisabled}
-                      onPress={() => handleSelectDay(item.isoString, item.isDisabled)}
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 10,
-                        backgroundColor: isSelected
-                          ? activeColors.primary
-                          : item.isToday
-                            ? primaryTintSoft
-                            : 'transparent',
-                        borderWidth: isSelected || item.isToday ? 1 : 0,
-                        borderColor: isSelected ? activeColors.primary : activeColors.primary,
-                        opacity: item.isDisabled ? 0.35 : 1,
-                      }}
-                    >
-                      <Text
-                        className={`text-sm font-bold ${
-                          isSelected
-                            ? 'text-primary-foreground'
-                            : item.isToday
-                              ? 'text-primary'
-                              : 'text-foreground'
-                        }`}
-                      >
-                        {item.dayNumber}
-                      </Text>
-                      {item.isToday && !isSelected ? (
-                        <View className="h-1 w-1 rounded-full bg-primary mt-0.5" />
-                      ) : null}
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </View>
+            <MonthGrid
+              month={viewMonthKey}
+              selectedDate={selectedDate}
+              today={todayIso}
+              onSelectDay={handleSelectDay}
+              isDayDisabled={isDayDisabled}
+            />
 
             {/* Action Buttons */}
             <View className="flex-row items-center space-x-3 pt-6">

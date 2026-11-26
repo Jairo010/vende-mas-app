@@ -1,5 +1,25 @@
 /** Wire format of the API catalog and promotions modules (delivered by sync pull). */
 
+export interface ProductFitmentDto {
+  make: string;
+  model: string | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+}
+
+/** Values are the lists of the API's sale sheet (ADR 0045), as text. */
+export interface ProductSaleSheetDto {
+  family: string;
+  position: string | null;
+  material: string | null;
+  filterType: string | null;
+  viscosity: string | null;
+  oilType: string | null;
+  presentation: string | null;
+  reference: string | null;
+  fitments: ProductFitmentDto[];
+}
+
 export interface ProductResponseDto {
   id: string;
   code: string;
@@ -16,6 +36,8 @@ export interface ProductResponseDto {
   isOutOfStock: boolean;
   imageUrl?: string | null;
   isActive: boolean;
+  /** Absent on servers before sale sheets. */
+  saleSheet?: ProductSaleSheetDto;
 }
 
 export interface CategoryResponseDto {

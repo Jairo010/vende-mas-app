@@ -16,6 +16,7 @@ describe('SyncCoordinator', () => {
     rejected: 0,
     pending: 0,
     pulled: true,
+    changed: true,
     error: null,
     ...overrides,
   });
@@ -54,8 +55,26 @@ describe('SyncCoordinator', () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['orders'] });
   });
 
+  it('leaves the screens alone when the run found nothing new', async () => {
+    engine.run.mockResolvedValue(summary({ pushed: 0, changed: false }));
+
+    await coordinator.syncNow(queryClient);
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['sync'] });
+    expect(useSyncStore.getState().phase).toBe('idle');
+  });
+
+  it('refreshes everything when the run broke before giving a summary', async () => {
+    engine.run.mockRejectedValue(new Error('boom'));
+
+    await expect(coordinator.syncNow(queryClient)).rejects.toThrow('boom');
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['visits'] });
+  });
+
   it('marks the device offline when the run could not reach the server', async () => {
-    engine.run.mockResolvedValue(summary({ error: 'OFFLINE', pulled: false }));
+    engine.run.mockResolvedValue(summary({ error: 'OFFLINE', pulled: false, changed: false }));
     outbox.countPending.mockResolvedValue(3);
 
     await coordinator.syncNow(queryClient);
